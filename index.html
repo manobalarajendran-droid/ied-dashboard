@@ -1,0 +1,2252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+.cbar{background:#111827;border-bottom:1px solid #1f2937;padding:3px 20px;display:flex;align-items:center;gap:10px;position:sticky;top:50px;z-index:250;font-size:11px}
+.cdot{width:8px;height:8px;border-radius:50%;flex-shrink:0;transition:background .3s}
+.cdot.live{background:#22c55e;box-shadow:0 0 5px #22c55e80}
+.cdot.off{background:#f59e0b;animation:cpulse 1s infinite}
+.cdot.sync{background:#60a5fa;animation:cpulse .5s infinite}
+.cdot.err{background:#ef4444}
+@keyframes cpulse{0%,100%{opacity:1}50%{opacity:.25}}
+.cbadge{padding:1px 7px;border-radius:2px;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.5px}
+.cbadge.live{background:#052e16;color:#4ade80;border:1px solid #14532d}
+.cbadge.off{background:#1c1002;color:#fbbf24;border:1px solid #78350f}
+.cbadge.sync{background:#0c1a2e;color:#93c5fd;border:1px solid #1e3a5f}
+.cbadge.err{background:#1c0606;color:#fca5a5;border:1px solid #7f1d1d}
+.cstatus{color:#6b7280;font-family:var(--mono);font-size:10px}
+.cwho{margin-left:auto;color:#4b5563;font-family:var(--mono);font-size:10px}
+</style>
+<title>IED Operations Dashboard — Plant-Tech Arabia</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+:root{
+  --bg:#f7f5f0;--bg2:#fff;--bg3:#f0ede6;--bg4:#e8e4dc;
+  --bd:#ddd9d0;--bd2:#c8c4bb;
+  --tx:#1c1917;--tx2:#6b6460;--tx3:#a09890;
+  --blue:#1d4ed8;--blueb:#eff6ff;--bluem:#bfdbfe;
+  --green:#15803d;--greenb:#f0fdf4;--greenm:#bbf7d0;
+  --yel:#a16207;--yelb:#fefce8;--yelm:#fde68a;
+  --red:#b91c1c;--redb:#fef2f2;--redm:#fecaca;
+  --orn:#c2410c;--ornb:#fff7ed;--ornm:#fed7aa;
+  --pur:#6d28d9;--purb:#f5f3ff;--purm:#ddd6fe;
+  --tl:#0e7490;--tlb:#f0fdfa;--tlm:#a5f3fc;
+  --mono:'JetBrains Mono',monospace;--sans:'Inter',sans-serif;
+  --r:6px;--sh:0 1px 3px rgba(0,0,0,.08);--sh2:0 4px 16px rgba(0,0,0,.12);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--tx);font-family:var(--sans);font-size:13px;min-height:100vh;line-height:1.5}
+.topbar{background:var(--bg2);border-bottom:1px solid var(--bd);padding:0 20px;display:flex;align-items:center;justify-content:space-between;height:50px;position:sticky;top:0;z-index:300;box-shadow:var(--sh)}
+.brand{display:flex;align-items:center;gap:10px}
+.logo{width:30px;height:30px;background:var(--blue);border-radius:var(--r);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;font-weight:500;color:#fff}
+.bname{font-weight:600;font-size:13px}.bsub{font-size:10px;color:var(--tx3)}
+.clk{font-family:var(--mono);font-size:11px;color:var(--tx2);background:var(--bg3);padding:4px 10px;border-radius:var(--r);border:1px solid var(--bd)}
+.bkbar{background:var(--bg3);border-bottom:1px solid var(--bd);padding:5px 20px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.bl{font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em}.bi{font-size:10px;color:var(--tx2);font-family:var(--mono)}
+.tabs{background:var(--bg2);border-bottom:2px solid var(--bd);padding:0 20px;display:flex;overflow-x:auto;position:sticky;top:50px;z-index:200}
+.tab{padding:11px 16px;font-size:12px;font-weight:500;color:var(--tx2);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;white-space:nowrap;transition:color .12s}
+.tab:hover{color:var(--tx)}.tab.active{color:var(--blue);border-bottom-color:var(--blue);font-weight:600}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 14px;border-radius:var(--r);font-size:12px;font-weight:500;cursor:pointer;border:1px solid transparent;font-family:var(--sans);transition:filter .12s;line-height:1}
+.btn:hover{filter:brightness(.93)}
+.bp{background:var(--blue);color:#fff;border-color:var(--blue)}.bs{background:var(--green);color:#fff;border-color:var(--green)}
+.bw{background:var(--yel);color:#fff;border-color:var(--yel)}.bd2{background:var(--red);color:#fff;border-color:var(--red)}
+.bg{background:var(--bg2);color:var(--tx2);border-color:var(--bd)}.bo{background:transparent;color:var(--blue);border-color:var(--bluem)}
+.bsm{padding:4px 10px;font-size:11px}.bxs{padding:2px 7px;font-size:10px;border-radius:4px}
+.main{padding:16px 20px}
+.panel{display:none}.panel.active{display:block}
+.card{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r);overflow:hidden;margin-bottom:14px;box-shadow:var(--sh)}
+.chd{padding:10px 14px;border-bottom:1px solid var(--bd);background:var(--bg3);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px}
+.ct{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--tx2)}
+.cb{padding:14px}
+.sg{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:9px;margin-bottom:14px}
+.sv{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r);padding:11px 14px;box-shadow:var(--sh)}
+.sn{font-family:var(--mono);font-size:24px;font-weight:500;line-height:1;margin-bottom:3px}
+.sl{font-size:10px;color:var(--tx2)}
+.sv.blue .sn{color:var(--blue)}.sv.green .sn{color:var(--green)}.sv.yellow .sn{color:var(--yel)}
+.sv.red .sn{color:var(--red)}.sv.orange .sn{color:var(--orn)}.sv.purple .sn{color:var(--pur)}
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{text-align:left;padding:8px 11px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--tx2);border-bottom:1px solid var(--bd);background:var(--bg3);white-space:nowrap}
+.tbl td{padding:8px 11px;border-bottom:1px solid var(--bd);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tbody tr:hover td{background:var(--bg3)}
+.badge{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:500;white-space:nowrap}
+.dot{width:5px;height:5px;border-radius:50%;display:inline-block;flex-shrink:0}
+.b-on{background:var(--greenb);color:var(--green);border:1px solid var(--greenm)}
+.b-yrd{background:var(--tlb);color:var(--tl);border:1px solid var(--tlm)}
+.b-off{background:var(--bg3);color:var(--tx2);border:1px solid var(--bd)}
+.b-abs{background:var(--redb);color:var(--red);border:1px solid var(--redm)}
+.b-lv{background:var(--yelb);color:var(--yel);border:1px solid var(--yelm)}
+.stag{display:inline-block;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600;font-family:var(--mono);white-space:nowrap}
+.s-ibz{background:var(--blueb);color:var(--blue);border:1px solid var(--bluem)}
+.s-arr{background:var(--purb);color:var(--pur);border:1px solid var(--purm)}
+.s-mad{background:var(--greenb);color:var(--green);border:1px solid var(--greenm)}
+.s-utd{background:var(--yelb);color:var(--yel);border:1px solid var(--yelm)}
+.s-eth{background:var(--ornb);color:var(--orn);border:1px solid var(--ornm)}
+.s-off{background:var(--bg3);color:var(--tx2);border:1px solid var(--bd)}
+.s-yrd{background:var(--tlb);color:var(--tl);border:1px solid var(--tlm)}
+.s-abs{background:var(--redb);color:var(--red);border:1px solid var(--redm)}
+.s-qms{background:var(--purb);color:var(--pur);border:1px solid var(--purm)}
+.tp{padding:2px 6px;border-radius:3px;font-size:9px;font-weight:700;font-family:var(--mono)}
+.tp-p{background:var(--blueb);color:var(--blue);border:1px solid var(--bluem)}
+.tp-t{background:var(--yelb);color:var(--yel);border:1px solid var(--yelm)}
+.tp-l{background:var(--purb);color:var(--pur);border:1px solid var(--purm)}
+.id-b{padding:2px 6px;border-radius:3px;font-size:10px;font-weight:600;font-family:var(--mono);white-space:nowrap}
+.id-a{background:var(--greenb);color:var(--green);border:1px solid var(--greenm)}
+.id-p{background:var(--yelb);color:var(--yel);border:1px solid var(--yelm)}
+.id-e{background:var(--redb);color:var(--red);border:1px solid var(--redm)}
+.id-r{background:var(--ornb);color:var(--orn);border:1px solid var(--ornm)}
+.id-n{background:var(--bg3);color:var(--tx3);border:1px solid var(--bd)}
+.ta-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-bottom:14px}
+.tac{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r);overflow:hidden;box-shadow:var(--sh);position:relative}
+.ta-stripe{position:absolute;left:0;top:0;bottom:0;width:4px}
+.tah{padding:12px 14px 12px 18px;border-bottom:1px solid var(--bd)}
+.ta-cl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--tx2);margin-bottom:2px}
+.ta-nm{font-size:13px;font-weight:600}.ta-dt{font-family:var(--mono);font-size:10px;color:var(--tx2);margin-top:2px}
+.tab2{padding:11px 14px 11px 18px}
+.ta-st{display:flex;gap:16px;margin-bottom:8px}
+.ta-si{text-align:center}.ta-sn2{font-family:var(--mono);font-size:18px;font-weight:600}.ta-sl2{font-size:9px;color:var(--tx2);text-transform:uppercase}
+.ta-lead{font-size:10px;color:var(--tx2);padding-top:7px;border-top:1px solid var(--bd)}.ta-lead b{color:var(--tx)}
+.pbar{height:3px;background:var(--bg4);border-radius:2px;margin-top:6px}
+.pf{height:100%;border-radius:2px}
+.al{display:flex;gap:10px;padding:10px 13px;border-radius:var(--r);border-left:3px solid;margin-bottom:8px}
+.al-u{background:var(--redb);border-color:var(--red)}.al-w{background:var(--yelb);border-color:var(--yel)}.al-i{background:var(--blueb);border-color:var(--blue)}
+.at{font-weight:600;font-size:12px;margin-bottom:1px}.ad{font-size:11px;color:var(--tx2)}
+/* ─── MANPOWER ─────────────────────────────── */
+.mp-wrap{overflow-x:auto}
+.mpt{border-collapse:collapse;min-width:900px}
+.mpt th{padding:7px 9px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--tx2);background:var(--bg3);border:1px solid var(--bd);white-space:nowrap;text-align:center}
+.mpt th:first-child{text-align:left;min-width:175px}
+.mpt td{border:1px solid var(--bd);padding:3px 5px;vertical-align:middle}
+.mpt tbody tr:hover td{background:#fafafa}
+.mpn{font-weight:500;font-size:11px;padding:5px 9px}
+.mpe{font-family:var(--mono);font-size:9px;color:var(--tx3)}
+.mpsel{width:100%;border:none;background:transparent;font-family:var(--sans);font-size:10px;font-weight:500;cursor:pointer;padding:4px 2px;outline:none;border-radius:3px;text-align:center}
+.mpsel:focus{box-shadow:0 0 0 2px var(--bluem)}
+.r-day{background:#dbeafe;color:#1e40af}.r-ngt{background:#ede9fe;color:#5b21b6}
+.r-ld{background:#dcfce7;color:#166534;font-weight:700}.r-sup{background:#fef3c7;color:#92400e}
+.r-no{background:transparent;color:var(--tx3)}
+/* ID warning in cell */
+.id-warn-cell{background:#fff7ed !important}
+.id-warn-badge{display:inline-block;font-size:9px;font-weight:700;color:var(--orn);background:var(--ornb);border:1px solid var(--ornm);border-radius:3px;padding:1px 4px;margin-top:2px;white-space:nowrap}
+.id-miss-badge{display:inline-block;font-size:9px;font-weight:700;color:var(--red);background:var(--redb);border:1px solid var(--redm);border-radius:3px;padding:1px 4px;margin-top:2px;white-space:nowrap}
+/* Overlap warning in cell */
+.ovlp-cell{background:#fff0f0 !important}
+.ovlp-badge{display:inline-block;font-size:9px;font-weight:700;color:var(--red);background:var(--redb);border:1px solid var(--redm);border-radius:3px;padding:1px 4px;margin-top:2px;white-space:nowrap}
+/* date under assignment */
+.dt-btn{display:block;font-size:9px;color:var(--tx3);text-align:center;cursor:pointer;padding:1px 3px;border-radius:2px;margin-top:1px;white-space:nowrap;max-width:108px;overflow:hidden;text-overflow:ellipsis}
+.dt-btn:hover{background:var(--bg3);color:var(--blue)}.dt-btn.has-d{color:var(--blue);font-weight:600}
+/* Tally rows */
+.tr-tally td{background:var(--bg3);border:1px solid var(--bd);padding:5px 8px;font-size:10px;vertical-align:middle;text-align:center}
+.tr-tally td:first-child{text-align:left;font-weight:600;font-size:11px;padding-left:10px}
+.t-day{color:var(--blue);font-weight:700;font-family:var(--mono);font-size:11px}
+.t-ngt{color:var(--pur);font-weight:700;font-family:var(--mono);font-size:11px}
+.t-req{color:var(--tx2);font-family:var(--mono);font-size:10px}
+.t-ok{color:var(--green);font-weight:700;font-family:var(--mono);font-size:12px}
+.t-bad{color:var(--red);font-weight:700;font-family:var(--mono);font-size:12px}
+.t-id-ok{color:var(--green);font-size:9px}.t-id-warn{color:var(--orn);font-size:9px}
+.nti{width:100%;border:none;background:transparent;font-family:var(--sans);font-size:10px;color:var(--tx2);padding:3px 4px;outline:none;border-radius:3px}
+.nti:focus{background:var(--yelb);box-shadow:0 0 0 1px var(--yelm)}
+/* ─── GANTT ─────────────────────────────────── */
+.gw{overflow-x:auto}
+.gc{min-width:1000px}
+.gleg{display:flex;gap:14px;flex-wrap:wrap;padding:9px 14px 6px;border-bottom:1px solid var(--bd);background:var(--bg3)}
+.gli{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--tx2)}
+.gls{width:16px;height:10px;border-radius:2px}
+.grow{display:grid;border-bottom:1px solid var(--bd);transition:background .1s}
+.grow:hover{background:var(--bg3)}
+.gname{padding:0 11px;display:flex;flex-direction:column;justify-content:center;border-right:1px solid var(--bd);background:var(--bg2)}
+.gn{font-size:11px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ge{font-size:9px;color:var(--tx3);font-family:var(--mono)}
+.garea{position:relative;height:32px}
+.gbar{position:absolute;height:22px;top:5px;border-radius:3px;display:flex;align-items:center;padding:0 7px;font-size:9px;font-weight:600;white-space:nowrap;overflow:hidden;cursor:pointer;border:1px solid rgba(0,0,0,.08);transition:filter .1s}
+.gbar:hover{filter:brightness(.9);z-index:10}
+.g-avail{background:var(--greenb);color:var(--green);border-color:var(--greenm)}
+.g-lv{background:var(--yelb);color:var(--yel);border-color:var(--yelm)}
+.g-abs{background:var(--redb);color:var(--red);border-color:var(--redm)}
+.g-off{background:var(--bg3);color:var(--tx2);border-color:var(--bd)}
+.g-ovlp{background:#fee2e2;border-color:#ef4444;color:#991b1b}
+.g-id-warn{border:2px dashed var(--orn) !important;opacity:.8}
+.gtd{position:absolute;top:0;bottom:0;width:2px;background:var(--red);opacity:.5;z-index:5}
+.gtdl{position:absolute;top:-15px;font-size:8px;color:var(--red);transform:translateX(-50%);font-family:var(--mono);font-weight:600;white-space:nowrap}
+/* Date ruler */
+.ruler{position:relative;height:28px;border-bottom:2px solid var(--bd);background:var(--bg3)}
+.rtick{position:absolute;top:0;bottom:0;border-left:1px solid var(--bd);display:flex;align-items:center;padding-left:2px;font-size:8px;font-family:var(--mono);color:var(--tx3);white-space:nowrap;pointer-events:none}
+.rtick.mo{border-left:2px solid var(--bd2);font-size:9px;font-weight:700;color:var(--tx2)}
+.rtick.td{border-left:2px solid var(--red);color:var(--red);font-weight:700;font-size:9px}
+/* ─── MODALS ─────────────────────────────────── */
+.ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:500;align-items:center;justify-content:center}
+.ov.open{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--bd);border-radius:10px;padding:22px;width:560px;max-width:96vw;max-height:88vh;overflow-y:auto;box-shadow:var(--sh2)}
+.modal.sm{width:400px}
+.mt{font-size:15px;font-weight:600;margin-bottom:18px}
+.fr{margin-bottom:12px}.fr2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.fl{font-size:10px;font-weight:600;color:var(--tx2);margin-bottom:4px;display:block;text-transform:uppercase;letter-spacing:.04em}
+.fi,.fsel{width:100%;background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r);padding:8px 10px;color:var(--tx);font-family:var(--sans);font-size:12px;outline:none;transition:border-color .12s}
+.fi:focus,.fsel:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blueb)}
+.br2{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;padding-top:14px;border-top:1px solid var(--bd)}
+.cr{display:flex;gap:6px;flex-wrap:wrap;margin-top:5px}
+.csw{width:26px;height:26px;border-radius:5px;cursor:pointer;border:2px solid transparent;transition:border-color .1s}
+.csw.sel{border-color:var(--tx);box-shadow:0 0 0 1px var(--tx)}
+.sh{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px}
+.st{font-size:14px;font-weight:600}.ss{font-size:11px;color:var(--tx2);margin-top:2px}
+.sr{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
+.si{flex:1;min-width:140px;background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r);padding:7px 11px;color:var(--tx);font-size:12px;outline:none;font-family:var(--sans)}
+.si:focus{border-color:var(--blue)}
+.fs{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r);padding:7px 9px;color:var(--tx);font-size:11px;outline:none;cursor:pointer;font-family:var(--sans)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:860px){.g2{grid-template-columns:1fr}}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:3px}
+
+/* ═══════════════════════════════════════════════════
+   DOC TRACKER PANEL — scoped to .dt-panel
+═══════════════════════════════════════════════════ */
+.dt-panel{background:var(--bg)}
+.dt-statsbar{display:flex;gap:8px;padding:10px 0 12px;flex-wrap:wrap}
+.dt-stat{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r);padding:8px 14px;display:flex;flex-direction:column;gap:2px;min-width:72px;box-shadow:var(--sh)}
+.dt-stat .sn{font-family:var(--mono);font-size:18px;font-weight:600;line-height:1}
+.dt-stat .sl{font-size:9px;color:var(--tx2);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-top:1px}
+.dt-stat.s-red{border-top:3px solid var(--red)}.dt-stat.s-red .sn{color:var(--red)}
+.dt-stat.s-orange{border-top:3px solid var(--orn)}.dt-stat.s-orange .sn{color:var(--orn)}
+.dt-stat.s-blue{border-top:3px solid var(--blue)}.dt-stat.s-blue .sn{color:var(--blue)}
+.dt-stat.s-yellow{border-top:3px solid var(--yel)}.dt-stat.s-yellow .sn{color:var(--yel)}
+.dt-stat.s-green{border-top:3px solid var(--green)}.dt-stat.s-green .sn{color:var(--green)}
+.dt-stat.s-purple{border-top:3px solid var(--pur)}.dt-stat.s-purple .sn{color:var(--pur)}
+.dt-stat.s-teal{border-top:3px solid var(--tl)}.dt-stat.s-teal .sn{color:var(--tl)}
+.dt-div{width:1px;background:var(--bd);margin:2px 4px;align-self:stretch}
+.dt-inner-tabs{display:flex;overflow-x:auto;background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r);margin-bottom:10px;padding:0 8px;box-shadow:var(--sh)}
+.dt-tab{font-size:11px;font-weight:500;padding:9px 13px;cursor:pointer;color:var(--tx2);border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;display:flex;align-items:center;gap:5px;transition:all .12s}
+.dt-tab:hover{color:var(--tx);background:var(--bg3);border-radius:4px 4px 0 0}
+.dt-tab.on{color:var(--blue);border-bottom-color:var(--blue);font-weight:700}
+.dt-tabsep{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;padding:9px 8px;color:var(--tx3);cursor:default;align-self:center}
+.dt-tc{font-family:var(--mono);font-size:9px;background:var(--bg3);border:1px solid var(--bd);padding:1px 5px;border-radius:99px;color:var(--tx3)}
+.dt-tab.on .dt-tc{background:var(--blueb);border-color:var(--bluem);color:var(--blue)}
+.dt-toolbar{padding:8px 0 10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.dt-srch{flex:1;min-width:180px;background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r);padding:6px 12px;font-family:var(--sans);font-size:12px;color:var(--tx);outline:none}
+.dt-srch:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blueb)}
+.dt-sel{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r);padding:6px 8px;font-family:var(--sans);font-size:11px;color:var(--tx2);outline:none;cursor:pointer}
+.dt-sel:focus{border-color:var(--blue)}
+.dt-tbl-wrap{overflow-x:auto;overflow-y:auto;max-height:calc(100vh - 310px);border:1px solid var(--bd);border-radius:var(--r);box-shadow:var(--sh)}
+.dt-tbl{width:100%;border-collapse:collapse;min-width:1000px;background:var(--bg2)}
+.dt-tbl thead{position:sticky;top:0;z-index:10}
+.dt-tbl th{background:var(--bg3);border-bottom:2px solid var(--bd2);padding:7px 12px;text-align:left;font-size:10px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--tx2);white-space:nowrap;cursor:pointer;user-select:none}
+.dt-tbl th:hover{color:var(--tx)}
+.dt-tbl td{border-bottom:1px solid var(--bd);padding:7px 12px;vertical-align:middle;font-size:12px}
+.dt-tbl tr:hover td{background:var(--bg3)}
+.dt-tbl tr.is-done td{opacity:.4}
+.dt-badge{font-size:10px;font-weight:600;padding:2px 8px;border-radius:99px;display:inline-block;letter-spacing:.3px;white-space:nowrap}
+.b-approved{background:var(--greenb);color:var(--green);border:1px solid var(--greenm)}
+.b-pending{background:var(--redb);color:var(--red);border:1px solid var(--redm)}
+.b-submitted{background:var(--yelb);color:var(--yel);border:1px solid var(--yelm)}
+.b-inprogress{background:var(--blueb);color:var(--blue);border:1px solid var(--bluem)}
+.b-blocked{background:var(--purb);color:var(--pur);border:1px solid var(--purm)}
+.b-done{background:var(--tlb);color:var(--tl);border:1px solid var(--tlm)}
+.b-cancelled{background:var(--bg3);color:var(--tx3);border:1px solid var(--bd)}
+.dt-pdot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:5px;flex-shrink:0}
+.dp-urgent{background:var(--red)}.dp-high{background:var(--orn)}.dp-medium{background:var(--yel)}.dp-low{background:#94a3b8}
+.dt-proj{font-family:var(--mono);font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap}
+.proj-ibz{background:#fee2e2;color:#991b1b}.proj-ar3{background:#fce7f3;color:#9d174d}
+.proj-ar5{background:#ede9fe;color:#5b21b6}.proj-lao{background:#fff7ed;color:#9a3412}
+.proj-maaden{background:#fef9c3;color:#854d0e}.proj-eth{background:#f0f9ff;color:#0c4a6e}
+.proj-qms{background:var(--purb);color:var(--pur)}.proj-admin{background:var(--bg3);color:var(--tx2);border:1px solid var(--bd)}
+.dt-editable{cursor:text;border-radius:4px;padding:2px 4px;display:block;line-height:1.45;outline:none;transition:background .1s}
+.dt-editable:hover{background:var(--blueb)}.dt-editable:focus{background:var(--blueb);outline:2px solid var(--blue);outline-offset:1px}
+.dt-stsel{background:var(--bg2);border:1px solid var(--bd);border-radius:5px;padding:3px 6px;font-family:var(--sans);font-size:10px;color:var(--tx);outline:none;cursor:pointer;width:100%}
+.dt-stsel:focus{border-color:var(--blue)}
+.dt-overdue{color:var(--red);font-weight:600}.dt-duesoon{color:var(--orn);font-weight:500}
+.dt-addrow{padding:10px 0 0;border-top:2px solid var(--bd);display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
+.dt-ai{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r);padding:7px 10px;font-family:var(--sans);font-size:12px;color:var(--tx);outline:none}
+.dt-ai:focus{border-color:var(--blue)}.dt-ai::placeholder{color:var(--tx3)}
+.dt-empty{padding:50px;text-align:center;color:var(--tx2);font-size:13px;background:var(--bg2)}
+.dt-updbadge{background:var(--greenb);color:var(--green);font-size:8px;font-weight:700;padding:1px 5px;border-radius:3px;margin-left:4px;border:1px solid var(--greenm)}
+.dt-csvbtn{background:var(--bg2);color:var(--tx2);border:1px solid var(--bd);padding:5px 11px;border-radius:var(--r);font-size:11px;font-weight:500;cursor:pointer;font-family:var(--sans)}
+.dt-csvbtn:hover{border-color:var(--blue);color:var(--blue)}
+/* Doc tracker modal — separate from dashboard modals */
+.dt-ov{display:none;position:fixed;inset:0;background:rgba(15,20,35,.4);z-index:600;align-items:center;justify-content:center}
+.dt-ov.open{display:flex}
+.dt-modal{background:var(--bg2);border:1px solid var(--bd);border-radius:10px;width:560px;max-height:88vh;overflow-y:auto;box-shadow:var(--sh2)}
+.dt-mhdr{padding:14px 18px;border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center;background:var(--bg3);border-radius:10px 10px 0 0}
+.dt-mhdr h3{font-size:14px;font-weight:700}
+.dt-mbody{padding:18px}
+.dt-mfoot{padding:10px 18px;border-top:1px solid var(--bd);display:flex;gap:8px;justify-content:flex-end;background:var(--bg3);border-radius:0 0 10px 10px}
+.dt-field{margin-bottom:12px}
+.dt-field label{display:block;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--tx2);margin-bottom:4px}
+.dt-field input,.dt-field select,.dt-field textarea{width:100%;background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r);padding:7px 10px;font-family:var(--sans);font-size:12px;color:var(--tx);outline:none}
+.dt-field input:focus,.dt-field select:focus,.dt-field textarea:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blueb)}
+.dt-field textarea{resize:vertical;min-height:70px;line-height:1.5}
+.dt-g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="brand"><div class="logo">IED</div><div><div class="bname">IED Operations Dashboard</div><div class="bsub">Plant-Tech Arabia Co. Ltd. &nbsp;·&nbsp; Al-Jubail, Saudi Arabia</div></div></div>
+  <span class="clk" id="clk">--</span>
+</div>
+<div class="cbar">
+  <div class="cdot off" id="cdot"></div>
+  <span class="cbadge off" id="cbadge">OFFLINE</span>
+  <span class="cstatus" id="cstatus">Connecting...</span>
+  <span class="bi" id="sv" style="color:#4b5563;font-family:var(--mono);font-size:10px;padding-left:6px;border-left:1px solid #1f2937"></span>
+  <button class="btn bg bsm" onclick="cloudSync()" style="font-size:10px;padding:2px 8px" title="Pull latest from cloud">&#8635; Sync</button>
+  <button class="btn bs bsm" onclick="expBk()" style="font-size:10px;padding:2px 8px">&#8659; Backup</button>
+  <button class="btn bw bsm" onclick="document.getElementById('impF').click()" style="font-size:10px;padding:2px 8px">&#8657; Restore</button>
+  <input type="file" id="impF" accept=".json" style="display:none" onchange="impBk(event)">
+  <button class="btn bg bsm" onclick="if(confirm('Reset all data?'))resetD()" style="font-size:10px;padding:2px 8px">&#8635; Reset</button>
+
+</div>
+<div class="tabs">
+  <div class="tab active" data-tab="ov" onclick="swTab(this)">📊 Overview</div>
+  <div class="tab" data-tab="sc" onclick="swTab(this)">📅 TA Schedule</div>
+  <div class="tab" data-tab="mp" onclick="swTab(this)">🔧 Manpower Plan</div>
+  <div class="tab" data-tab="gt" onclick="swTab(this)">📈 Team Gantt</div>
+  <div class="tab" data-tab="tm" onclick="swTab(this)">👥 Team</div>
+  <div class="tab" data-tab="ql" onclick="swTab(this)">🎓 Qualifications</div>
+  <div class="tab" data-tab="id" onclick="swTab(this)">🪪 Site IDs</div>
+  <div class="tab" data-tab="dt" onclick="swTab(this)">📋 Doc Tracker</div>
+</div>
+<div class="main">
+  <div class="panel active" id="p-ov">
+    <div class="sg" id="sg"></div>
+
+    <!-- Doc tracker health bar -->
+    <div class="card" style="margin-bottom:14px">
+      <div class="chd">
+        <span class="ct">📋 Document Health</span>
+        <span style="font-size:10px;color:var(--tx2)" id="ov-dt-updated"></span>
+      </div>
+      <div class="cb" style="padding:12px 14px">
+        <!-- Status mini-stats -->
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px" id="ov-dt-stats"></div>
+        <!-- Per-project progress bars -->
+        <div id="ov-dt-projects"></div>
+      </div>
+    </div>
+
+    <!-- Urgent doc items + Active TAs side by side -->
+    <div class="g2" style="margin-bottom:0">
+      <div class="card"><div class="chd"><span class="ct">🚨 Urgent &amp; Overdue Documents</span><span style="font-size:10px;color:var(--tx2)" id="ov-dt-urgent-count"></span></div><div class="cb" id="ov-dt-urgent"></div></div>
+      <div class="card"><div class="chd"><span class="ct">📌 Active TAs</span></div><div class="cb" id="taq"></div></div>
+    </div>
+
+    <div class="g2" style="margin-top:14px">
+      <div class="card"><div class="chd"><span class="ct">🚨 Action Required — People</span></div><div class="cb" id="als"></div></div>
+      <div class="card"><div class="chd"><span class="ct">📍 Deployment Snapshot</span></div><div class="cb" id="ds"></div></div>
+    </div>
+  </div>
+  <div class="panel" id="p-sc">
+    <div class="sh"><div><div class="st">TA Schedule</div><div class="ss">Click Edit to modify any TA</div></div><button class="btn bp" onclick="openTA(null)">+ Add TA</button></div>
+    <div class="ta-grid" id="tg"></div>
+    <div class="card"><div class="chd"><span class="ct">Gantt — TA Timeline</span></div><div style="overflow-x:auto;padding:4px 0"><div id="minig" style="min-width:800px"></div></div></div>
+  </div>
+  <div class="panel" id="p-mp">
+    <div class="sh">
+      <div><div class="st">Manpower Planning</div><div class="ss">Assign roles · Click dates under assignment to set custom dates · 🪪 = ID not active (excluded from effective count)</div></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <select class="fs" id="mpFShow" onchange="renMP()"><option value="active">Active &amp; Upcoming</option><option value="all">All TAs</option></select>
+        <select class="fs" id="mpFTA" onchange="renMP()"><option value="">All TAs</option></select>
+        <select class="fs" id="mpFRole" onchange="renMP()"><option value="">All Roles</option><option value="Lead">QC Lead</option><option value="Day">Day</option><option value="Night">Night</option><option value="unassigned">Unassigned</option><option value="id_warn">ID Warning</option></select>
+        <select class="fs" id="mpFType" onchange="renMP()"><option value="">All Types</option><option value="PERM">Permanent</option><option value="TEMP">TS-Temp</option><option value="LOCAL">Z-Local</option></select>
+        <input class="si" style="max-width:155px" id="mpFName" placeholder="Search name..." oninput="renMP()">
+      </div>
+    </div>
+    <div id="ovWarn" style="display:none;background:var(--redb);border:1px solid var(--redm);border-radius:var(--r);padding:10px 14px;margin-bottom:10px;font-size:12px;color:var(--red)"></div>
+    <div id="idWarn" style="display:none;background:var(--ornb);border:1px solid var(--ornm);border-radius:var(--r);padding:10px 14px;margin-bottom:10px;font-size:12px;color:var(--orn)"></div>
+    <div class="card" style="overflow:hidden">
+      <div class="chd"><span class="ct">Assignment Grid</span>
+        <div style="display:flex;gap:6px;font-size:10px;align-items:center;flex-wrap:wrap">
+          <span style="background:#dbeafe;color:#1e40af;padding:1px 6px;border-radius:3px;font-weight:600">Day</span>
+          <span style="background:#ede9fe;color:#5b21b6;padding:1px 6px;border-radius:3px;font-weight:600">Night</span>
+          <span style="background:#dcfce7;color:#166534;padding:1px 6px;border-radius:3px;font-weight:700">Lead</span>
+          <span style="background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:3px;font-weight:600">Support</span>
+          <span style="background:var(--ornb);color:var(--orn);padding:1px 6px;border-radius:3px;font-weight:600;border:1px solid var(--ornm)">🪪 ID not active</span>
+          <span style="background:var(--redb);color:var(--red);padding:1px 6px;border-radius:3px;font-weight:600;border:1px solid var(--redm)">⚠ Overlap</span>
+        </div>
+      </div>
+      <div class="mp-wrap"><table class="mpt" id="mpt"></table></div>
+    </div>
+    <div class="card"><div class="chd"><span class="ct">Coverage Summary</span></div><div class="cb" id="mps"></div></div>
+  </div>
+  <div class="panel" id="p-gt">
+    <div class="sh">
+      <div><div class="st">Team Gantt</div><div class="ss">One row per person · Date ruler · Bars from assignments · Click bar → set custom dates · 🟠 dashed = ID not active</div></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <select class="fs" id="gr" onchange="onRngChg()">
+          <option value="3m">3 Months</option>
+          <option value="6m">6 Months</option>
+          <option value="12m">12 Months</option>
+          <option value="custom">Custom range...</option>
+        </select>
+        <input type="date" id="gsDate" style="display:none" class="fi" style="width:130px" onchange="renGT()">
+        <span id="gsDateSep" style="display:none;font-size:11px;color:var(--tx2)">to</span>
+        <input type="date" id="geDate" style="display:none" class="fi" style="width:130px" onchange="renGT()">
+        <select class="fs" id="gf" onchange="renGT()"><option value="all">All Team</option><option value="ins">Inspectors &amp; Engineers</option><option value="ld">Leads &amp; Seniors</option></select>
+        <button class="btn bp bsm" onclick="genSummary()" title="Generate printable monthly summary for audit">📄 Monthly Summary</button>
+      </div>
+    </div>
+    <!-- Gantt inline filter row -->
+    <div style="background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r);padding:8px 12px;margin-bottom:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <span style="font-size:10px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.06em">Filter:</span>
+      <input class="si" style="max-width:160px;padding:5px 9px;font-size:11px" id="gtFName" placeholder="Name / emp no..." oninput="renGT()">
+      <select class="fs" id="gtFTA" onchange="renGT()"><option value="">All TAs</option></select>
+      <select class="fs" id="gtFRole" onchange="renGT()"><option value="">All Roles</option><option value="Lead">QC Lead</option><option value="Day">Day</option><option value="Night">Night</option><option value="assigned">Has assignment</option><option value="free">No assignment (free)</option><option value="overlap">Has overlap ⚠</option><option value="id_warn">ID warning 🪪</option></select>
+      <select class="fs" id="gtFType" onchange="renGT()"><option value="">All Types</option><option value="PERM">Permanent</option><option value="TEMP">TS-Temp</option><option value="LOCAL">Z-Local</option></select>
+      <button class="btn bg bsm" onclick="clrGTFilters()">✕ Clear</button>
+      <span id="gtFCount" style="font-size:10px;color:var(--tx2);margin-left:auto"></span>
+    </div>
+    <div class="card" style="overflow:hidden">
+      <div id="gleg" class="gleg"></div>
+      <div class="gw"><div class="gc" id="gc"></div></div>
+    </div>
+  </div>
+  <div class="panel" id="p-tm">
+    <div class="sh"><div><div class="st">Team</div><div class="ss" id="tc">-- members</div></div><button class="btn bp" onclick="openMem(null)">+ Add Member</button></div>
+    <div class="sr">
+      <input class="si" id="ts" placeholder="Search name or emp no..." oninput="renTM()">
+      <select class="fs" id="tf" onchange="renTM()"><option value="">All Status</option><option value="site">On Site</option><option value="yard">Yard</option><option value="office">Office</option><option value="mob">Mobilizing</option><option value="lv">Leave</option><option value="abs">Absconded</option></select>
+      <select class="fs" id="tt" onchange="renTM()"><option value="">All Types</option><option value="PERM">Permanent</option><option value="TEMP">TS-Temp</option><option value="LOCAL">Z-Local</option></select>
+      <select class="fs" id="tRole" onchange="renTM()"><option value="">All Roles</option><option value="Manager">Manager</option><option value="Team Leader">Team Leader</option><option value="Sr. Engineer">Sr. Engineer</option><option value="QC Inspector">QC Inspector</option><option value="QC Engineer">QC Engineer</option><option value="QA/QC">QA/QC Engineer</option></select>
+      <select class="fs" id="tTA" onchange="renTM()"><option value="">All Sites</option></select>
+      <button class="btn bg bsm" onclick="clrTMF()">✕ Clear</button>
+      <span id="tmCount" style="font-size:10px;color:var(--tx2);white-space:nowrap"></span>
+    </div>
+    <div class="card" style="overflow:hidden"><table class="tbl"><thead><tr><th>Emp No</th><th>Name</th><th>Role</th><th>Type</th><th>Site</th><th>Status</th><th>Next</th><th>Notes</th><th></th></tr></thead><tbody id="tb"></tbody></table></div>
+  </div>
+  <div class="panel" id="p-ql">
+    <div class="sh"><div><div class="st">Qualification Tracker</div><div class="ss" id="qlCount"></div></div></div>
+    <div class="sr">
+      <input class="si" id="qlFName" placeholder="Search name or emp no..." oninput="renQL()">
+      <select class="fs" id="qlFType" onchange="renQL()"><option value="">All Types</option><option value="PERM">Permanent</option><option value="TEMP">TS-Temp</option><option value="LOCAL">Z-Local</option></select>
+      <select class="fs" id="qlFStat" onchange="renQL()"><option value="">All Status</option><option value="expired">Expired</option><option value="expiring">Expiring &lt;30 days</option><option value="valid">Valid</option><option value="missing">Dates not on file</option></select>
+      <select class="fs" id="qlFCert" onchange="renQL()"><option value="">All Certs</option><option value="cswip">CSWIP / IWI</option><option value="asnt">ASNT Level II</option><option value="api">API 510/570</option><option value="h2s">H2S</option></select>
+      <button class="btn bg bsm" onclick="clrQLF()">✕ Clear</button>
+    </div>
+    <div class="card" style="overflow:hidden"><table class="tbl"><thead><tr><th>Name</th><th>CSWIP/IWI</th><th>ASNT LII</th><th>API 510/570</th><th>H2S</th><th>Certs on file</th><th>Status</th><th></th></tr></thead><tbody id="qb"></tbody></table></div>
+  </div>
+  <div class="panel" id="p-id">
+    <div class="sh"><div><div class="st">Site ID Tracker</div><div class="ss" id="idCount"></div></div></div>
+    <div class="sr">
+      <input class="si" id="idFName" placeholder="Search name or emp no..." oninput="renID()">
+      <select class="fs" id="idFType" onchange="renID()"><option value="">All Types</option><option value="PERM">Permanent</option><option value="TEMP">TS-Temp</option><option value="LOCAL">Z-Local</option></select>
+      <select class="fs" id="idFSite" onchange="renID()">
+        <option value="">All Sites</option>
+        <option value="ibz">IBN ZAHR</option>
+        <option value="arr">AR-RAZI</option>
+        <option value="mad">MAADEN</option>
+        <option value="utd">UNITED LAO</option>
+        <option value="sip">SIPCHEM</option>
+        <option value="sab">SABIC GEN</option>
+      </select>
+      <select class="fs" id="idFStat" onchange="renID()">
+        <option value="">All Status</option>
+        <option value="ACTIVE">Active</option>
+        <option value="PENDING">Pending</option>
+        <option value="RENEWAL">Renewal</option>
+        <option value="EXPIRED">Expired</option>
+        <option value="none">Not on file</option>
+        <option value="issue">Any issue (non-Active)</option>
+      </select>
+      <button class="btn bg bsm" onclick="clrIDF()">✕ Clear</button>
+    </div>
+    <div class="card" style="overflow:hidden"><table class="tbl"><thead><tr><th>Name</th><th>IBN ZAHR</th><th>AR-RAZI</th><th>MAADEN</th><th>UNITED LAO</th><th>SIPCHEM</th><th>SABIC GEN</th><th></th></tr></thead><tbody id="ib"></tbody></table></div>
+  </div>
+  <!-- ═══════════════════════════════════════════════════
+       DOC TRACKER PANEL
+  ═══════════════════════════════════════════════════ -->
+  <div class="panel dt-panel" id="p-dt">
+    <!-- Stats bar -->
+    <div class="dt-statsbar">
+      <div class="dt-stat s-red"><div class="sn" id="dt-s-pending">0</div><div class="sl">Pending</div></div>
+      <div class="dt-stat s-yellow"><div class="sn" id="dt-s-submitted">0</div><div class="sl">Submitted</div></div>
+      <div class="dt-stat s-blue"><div class="sn" id="dt-s-inprogress">0</div><div class="sl">In Progress</div></div>
+      <div class="dt-stat s-orange"><div class="sn" id="dt-s-blocked">0</div><div class="sl">Blocked</div></div>
+      <div class="dt-stat s-green"><div class="sn" id="dt-s-approved">0</div><div class="sl">Approved/Done</div></div>
+      <div class="dt-div"></div>
+      <div class="dt-stat s-purple"><div class="sn" id="dt-s-overdue">0</div><div class="sl">Overdue</div></div>
+      <div class="dt-stat s-teal"><div class="sn" id="dt-s-total">0</div><div class="sl">Total Items</div></div>
+      <div style="margin-left:auto;display:flex;gap:6px;align-items:center">
+        <button class="dt-csvbtn" onclick="dtExportCSV()" title="Export to CSV">↓ CSV</button>
+      </div>
+    </div>
+    <!-- Inner TA tabs -->
+    <div class="dt-inner-tabs">
+      <div class="dt-tabsep">TA</div>
+      <div class="dt-tab on" data-dtab="all"   onclick="dtSwTab('all')">⚡ All Open <span class="dt-tc" id="dtc-all">0</span></div>
+      <div class="dt-tab"    data-dtab="IBN ZAHR"     onclick="dtSwTab('IBN ZAHR')">IBN ZAHR <span class="dt-tc" id="dtc-IBN ZAHR">0</span></div>
+      <div class="dt-tab"    data-dtab="AR-RAZI P-III" onclick="dtSwTab('AR-RAZI P-III')">AR-RAZI P-III <span class="dt-tc" id="dtc-AR-RAZI P-III">0</span></div>
+      <div class="dt-tab"    data-dtab="AR-RAZI P-V"  onclick="dtSwTab('AR-RAZI P-V')">AR-RAZI P-V <span class="dt-tc" id="dtc-AR-RAZI P-V">0</span></div>
+      <div class="dt-tab"    data-dtab="UNITED LAO"   onclick="dtSwTab('UNITED LAO')">UNITED LAO <span class="dt-tc" id="dtc-UNITED LAO">0</span></div>
+      <div class="dt-tab"    data-dtab="MAADEN PAU"   onclick="dtSwTab('MAADEN PAU')">MAADEN PAU <span class="dt-tc" id="dtc-MAADEN PAU">0</span></div>
+      <div class="dt-tab"    data-dtab="ETH UNITED"   onclick="dtSwTab('ETH UNITED')">ETH UNITED <span class="dt-tc" id="dtc-ETH UNITED">0</span></div>
+      <div class="dt-tabsep">QMS/OPS</div>
+      <div class="dt-tab"    data-dtab="QMS"    onclick="dtSwTab('QMS')">📋 QMS / Audit <span class="dt-tc" id="dtc-QMS">0</span></div>
+      <div class="dt-tab"    data-dtab="ADMIN"  onclick="dtSwTab('ADMIN')">⚙️ Admin / Ops <span class="dt-tc" id="dtc-ADMIN">0</span></div>
+    </div>
+    <!-- Toolbar -->
+    <div class="dt-toolbar">
+      <input class="dt-srch" id="dt-srch" placeholder="🔍  Search everything…" oninput="dtRender()">
+      <select class="dt-sel" id="dt-f-type" onchange="dtRender()">
+        <option value="">All Types</option>
+        <option>ITP</option><option>WPS</option><option>PQR</option><option>WQT</option>
+        <option>Weld Map</option><option>Procedure</option><option>ANDT</option><option>NDT</option>
+        <option>Vendor ITP</option><option>QMS Doc</option><option>Invoice</option><option>Procurement</option><option>Other</option>
+      </select>
+      <select class="dt-sel" id="dt-f-status" onchange="dtRender()">
+        <option value="">All Statuses</option>
+        <option>Pending</option><option>Submitted</option><option>In Progress</option>
+        <option>Approved</option><option>Done</option><option>Blocked</option><option>Cancelled</option>
+      </select>
+      <select class="dt-sel" id="dt-f-pri" onchange="dtRender()">
+        <option value="">All Priority</option>
+        <option>Urgent</option><option>High</option><option>Medium</option><option>Low</option>
+      </select>
+      <button class="btn bg bsm" onclick="dtClearFilters()">✕ Clear</button>
+      <span id="dt-fcount" style="font-size:10px;color:var(--tx2);margin-left:4px"></span>
+    </div>
+    <!-- Table -->
+    <div class="dt-tbl-wrap">
+      <table class="dt-tbl">
+        <thead><tr>
+          <th style="width:26px"  onclick="dtSortBy('pri')">#</th>
+          <th style="width:105px" onclick="dtSortBy('project')">Project</th>
+          <th style="min-width:200px" onclick="dtSortBy('docName')">Item / Document</th>
+          <th style="width:88px"  onclick="dtSortBy('docType')">Type</th>
+          <th style="width:118px" onclick="dtSortBy('status')">Status</th>
+          <th style="width:130px" onclick="dtSortBy('owner')">Owner</th>
+          <th style="width:92px"  onclick="dtSortBy('dueDate')">Due Date</th>
+          <th style="min-width:220px">Notes / Latest Update</th>
+          <th style="width:80px"  onclick="dtSortBy('updated')">Updated</th>
+          <th style="width:50px"></th>
+        </tr></thead>
+        <tbody id="dt-tbody"></tbody>
+      </table>
+      <div id="dt-empty" class="dt-empty" style="display:none">No items match the current filters.</div>
+    </div>
+    <!-- Add row -->
+    <div class="dt-addrow">
+      <input class="dt-ai" id="dt-new-name" placeholder="Item / Document name…" style="flex:2;min-width:180px" onkeydown="if(event.key==='Enter')dtAddDoc()">
+      <select class="dt-ai" id="dt-new-proj" style="flex:1;min-width:120px">
+        <option>IBN ZAHR</option><option>AR-RAZI P-III</option><option>AR-RAZI P-V</option>
+        <option>UNITED LAO</option><option>MAADEN PAU</option><option>ETH UNITED</option>
+        <option>QMS</option><option>ADMIN</option>
+      </select>
+      <select class="dt-ai" id="dt-new-type" style="flex:1;min-width:100px">
+        <option>ITP</option><option>WPS</option><option>PQR</option><option>WQT</option>
+        <option>Weld Map</option><option>Procedure</option><option>ANDT</option><option>NDT</option>
+        <option>Vendor ITP</option><option>QMS Doc</option><option>Invoice</option><option>Procurement</option><option>Other</option>
+      </select>
+      <select class="dt-ai" id="dt-new-pri" style="min-width:85px">
+        <option>Urgent</option><option>High</option><option>Medium</option><option>Low</option>
+      </select>
+      <input class="dt-ai" id="dt-new-owner" placeholder="Owner…" style="flex:1;min-width:95px">
+      <input class="dt-ai" id="dt-new-due" type="date" style="min-width:128px">
+      <button class="btn bp bsm" onclick="dtAddDoc()">+ Add</button>
+    </div>
+  </div>
+
+  <!-- Doc Tracker Edit Modal (separate from dashboard modals) -->
+  <div class="dt-ov" id="dt-modal">
+    <div class="dt-modal">
+      <div class="dt-mhdr"><h3>Edit Item</h3><button class="btn bg bsm" onclick="dtCloseModal()">✕</button></div>
+      <div class="dt-mbody">
+        <input type="hidden" id="dt-edit-id">
+        <div class="dt-g2">
+          <div class="dt-field"><label>Project</label>
+            <select id="dt-edit-proj"><option>IBN ZAHR</option><option>AR-RAZI P-III</option><option>AR-RAZI P-V</option><option>UNITED LAO</option><option>MAADEN PAU</option><option>ETH UNITED</option><option>QMS</option><option>ADMIN</option></select></div>
+          <div class="dt-field"><label>Type</label>
+            <select id="dt-edit-type"><option>ITP</option><option>WPS</option><option>PQR</option><option>WQT</option><option>Weld Map</option><option>Procedure</option><option>ANDT</option><option>NDT</option><option>Vendor ITP</option><option>QMS Doc</option><option>Invoice</option><option>Procurement</option><option>Other</option></select></div>
+        </div>
+        <div class="dt-field"><label>Item / Document Name</label><input id="dt-edit-name" type="text"></div>
+        <div class="dt-g2">
+          <div class="dt-field"><label>Status</label>
+            <select id="dt-edit-status"><option>Pending</option><option>Submitted</option><option>In Progress</option><option>Approved</option><option>Done</option><option>Blocked</option><option>Cancelled</option></select></div>
+          <div class="dt-field"><label>Priority</label>
+            <select id="dt-edit-pri"><option>Urgent</option><option>High</option><option>Medium</option><option>Low</option></select></div>
+        </div>
+        <div class="dt-g2">
+          <div class="dt-field"><label>Owner</label><input id="dt-edit-owner" type="text"></div>
+          <div class="dt-field"><label>Due Date</label><input id="dt-edit-due" type="date"></div>
+        </div>
+        <div class="dt-field"><label>Notes / Latest Update</label><textarea id="dt-edit-notes" rows="4"></textarea></div>
+      </div>
+      <div class="dt-mfoot">
+        <button class="btn bd2 bsm" onclick="dtDeleteDoc()">🗑 Delete</button>
+        <button class="btn bg bsm" onclick="dtCloseModal()">Cancel</button>
+        <button class="btn bp bsm" onclick="dtSaveEdit()">Save</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- TA MODAL -->
+<div class="ov" id="taOv"><div class="modal">
+  <div class="mt" id="tamt">TA Details</div><input type="hidden" id="taId">
+  <div class="fr2"><div><label class="fl">Client</label><input class="fi" id="taCl"></div><div><label class="fl">TA Name</label><input class="fi" id="taNm"></div></div>
+  <div class="fr2"><div><label class="fl">Start Date</label><input class="fi" type="date" id="taSt"></div><div><label class="fl">End Date</label><input class="fi" type="date" id="taEd"></div></div>
+  <div class="fr2"><div><label class="fl">QC Lead</label><input class="fi" id="taLd"></div><div><label class="fl">Site Key</label><input class="fi" id="taSk" placeholder="e.g. IBN ZAHR T/A"></div></div>
+  <div class="fr2"><div><label class="fl">Day Required</label><input class="fi" type="number" id="taRd" min="0" value="0"></div><div><label class="fl">Night Required</label><input class="fi" type="number" id="taRn" min="0" value="0"></div></div>
+  <div class="fr"><label class="fl">Bar Color</label><div class="cr" id="cp"></div><input type="hidden" id="taCol" value="#1d4ed8"></div>
+  <div class="fr"><label class="fl">Notes</label><input class="fi" id="taNt"></div>
+  <div class="br2"><button class="btn bd2 bsm" id="taDb" onclick="delTA()" style="margin-right:auto;display:none">Delete TA</button><button class="btn bg" onclick="closeAll()">Cancel</button><button class="btn bp" onclick="saveTA()">Save TA</button></div>
+</div></div>
+
+<!-- MEMBER MODAL -->
+<div class="ov" id="memOv"><div class="modal">
+  <div class="mt" id="mmt">Team Member</div><input type="hidden" id="mOrig">
+  <div class="fr2"><div><label class="fl">Emp No</label><input class="fi" id="mEmp"></div><div><label class="fl">Type</label><select class="fsel" id="mTyp"><option value="PERM">Permanent</option><option value="TEMP">TS-Temp</option><option value="LOCAL">Z-Local</option></select></div></div>
+  <div class="fr"><label class="fl">Full Name</label><input class="fi" id="mNm"></div>
+  <div class="fr2"><div><label class="fl">Role</label><select class="fsel" id="mRol"><option>Manager / IED (MR)</option><option>Team Leader / IED</option><option>Sr. Engineer / IED</option><option>QC Inspector</option><option>QC Engineer</option><option>QA/QC Engineer</option></select></div>
+  <div><label class="fl">Current Site</label><select class="fsel" id="mSit"><option value="OFFICE/IED">Office/IED</option><option value="YARD/IED">Yard/IED</option><option value="IBN ZAHR T/A">IBN ZAHR TA</option><option value="AR-RAZI V T/A">AR-RAZI P-V TA</option><option value="AR-RAZI P-III T/A">AR-RAZI P-III TA</option><option value="UNITED LAO T/A">UNITED LAO TA</option><option value="MAADEN PAU T/A">MAADEN PAU TA</option><option value="MAADEN AMM III/SUPPLY">MAADEN AMM-3</option><option value="ETH UNITED T/A">ETH UNITED TA</option><option value="LEAVE">Leave</option><option value="MOBILIZING">Mobilizing</option><option value="ABSCONDED">Absconded</option></select></div></div>
+  <div class="fr"><label class="fl">Next Assignment</label><input class="fi" id="mNxt"></div>
+  <div class="fr"><label class="fl">Notes / Certification</label><input class="fi" id="mNts"></div>
+  <div class="br2"><button class="btn bd2 bsm" id="mDb" onclick="delMem()" style="margin-right:auto;display:none">Remove</button><button class="btn bg" onclick="closeAll()">Cancel</button><button class="btn bp" onclick="saveMem()">Save</button></div>
+</div></div>
+
+<!-- ASSIGNMENT DATE MODAL -->
+<div class="ov" id="asgOv"><div class="modal sm">
+  <div class="mt" id="asgTt">Assignment Dates</div><input type="hidden" id="asgE"><input type="hidden" id="asgT">
+  <div style="background:var(--bg3);border-radius:var(--r);padding:10px 12px;margin-bottom:14px;font-size:12px" id="asgInfo"></div>
+  <div class="fr2"><div><label class="fl">From Date</label><input class="fi" type="date" id="asgSt"></div><div><label class="fl">To Date</label><input class="fi" type="date" id="asgEd"></div></div>
+  <div style="font-size:11px;color:var(--tx2);margin-top:-6px;margin-bottom:12px">Leave blank to use TA dates</div>
+  <div class="br2"><button class="btn bg bsm" onclick="clrAsgD()" style="margin-right:auto">Clear custom dates</button><button class="btn bg" onclick="closeAll()">Cancel</button><button class="btn bp" onclick="saveAsgD()">Save</button></div>
+</div></div>
+
+<!-- QUALS MODAL -->
+<div class="ov" id="qlOv"><div class="modal">
+  <div class="mt" id="qlmt">Qualifications</div><input type="hidden" id="qEmp">
+  <div class="fr"><label class="fl">CSWIP 3.1 / IWI — Expiry</label><input class="fi" type="date" id="qCs"></div>
+  <div class="fr"><label class="fl">ASNT Level II — Expiry</label><input class="fi" type="date" id="qAs"></div>
+  <div class="fr"><label class="fl">API 510 / API 570 — Expiry</label><input class="fi" type="date" id="qAp"></div>
+  <div class="fr"><label class="fl">H2S Awareness — Expiry</label><input class="fi" type="date" id="qH2"></div>
+  <div class="fr"><label class="fl">Certs on file / Notes</label><input class="fi" id="qOt"></div>
+  <div class="br2"><button class="btn bg" onclick="closeAll()">Cancel</button><button class="btn bp" onclick="saveQl()">Save</button></div>
+</div></div>
+
+<!-- IDs MODAL -->
+<div class="ov" id="idOv"><div class="modal">
+  <div class="mt" id="idmt">Site IDs</div><input type="hidden" id="idEmp">
+  <div class="fr2"><div><label class="fl">IBN ZAHR</label><select class="fsel" id="idIbz"><option value="">—</option><option value="ACTIVE">Active</option><option value="PENDING">Pending</option><option value="RENEWAL">Renewal</option><option value="EXPIRED">Expired</option><option value="NA">N/A</option></select></div><div><label class="fl">AR-RAZI</label><select class="fsel" id="idArr"><option value="">—</option><option value="ACTIVE">Active</option><option value="PENDING">Pending</option><option value="RENEWAL">Renewal</option><option value="EXPIRED">Expired</option><option value="NA">N/A</option></select></div></div>
+  <div class="fr2"><div><label class="fl">MAADEN</label><select class="fsel" id="idMad"><option value="">—</option><option value="ACTIVE">Active</option><option value="PENDING">Pending</option><option value="RENEWAL">Renewal</option><option value="EXPIRED">Expired</option><option value="NA">N/A</option></select></div><div><label class="fl">UNITED LAO</label><select class="fsel" id="idUtd"><option value="">—</option><option value="ACTIVE">Active</option><option value="PENDING">Pending</option><option value="RENEWAL">Renewal</option><option value="EXPIRED">Expired</option><option value="NA">N/A</option></select></div></div>
+  <div class="fr2"><div><label class="fl">SIPCHEM</label><select class="fsel" id="idSip"><option value="">—</option><option value="ACTIVE">Active</option><option value="PENDING">Pending</option><option value="RENEWAL">Renewal</option><option value="EXPIRED">Expired</option><option value="NA">N/A</option></select></div><div><label class="fl">SABIC GENERAL</label><select class="fsel" id="idSab"><option value="">—</option><option value="ACTIVE">Active</option><option value="PENDING">Pending</option><option value="RENEWAL">Renewal</option><option value="EXPIRED">Expired</option><option value="NA">N/A</option></select></div></div>
+  <div class="br2"><button class="btn bg" onclick="closeAll()">Cancel</button><button class="btn bp" onclick="saveId()">Save</button></div>
+</div></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// STORAGE KEY — bump version so old broken data doesn't load
+// ═══════════════════════════════════════════════════════════
+const SK = "ied_v5";
+
+// ═══════════════════════════════════════════════════════════
+// ID ↔ TA MAPPING
+// determines which ID key is required for each TA
+// ═══════════════════════════════════════════════════════════
+function idKeyForTA(taId) {
+  const ta = D.tas.find(t => t.id === taId);
+  if (!ta) return null;
+  const cl = (ta.cl + " " + ta.nm + " " + (ta.sk || "")).toUpperCase();
+  if (cl.includes("IBN ZAHR") || cl.includes("IBNZAHR")) return "ibz";
+  if (cl.includes("AR-RAZI") || cl.includes("ARRAZI"))   return "arr";
+  if (cl.includes("MAADEN"))  return "mad";
+  if (cl.includes("UNITED"))  return "utd";
+  if (cl.includes("SIPCHEM")) return "sip";
+  if (cl.includes("SABIC"))   return "sab";
+  return null;
+}
+
+function getIdStatus(empNo, taId) {
+  const key = idKeyForTA(taId);
+  if (!key) return "NA"; // no ID requirement for this client
+  const ids = D.ids[empNo] || {};
+  return ids[key] || "";
+}
+
+function idOk(empNo, taId) {
+  const s = getIdStatus(empNo, taId);
+  return s === "ACTIVE" || s === "NA";
+}
+
+// ═══════════════════════════════════════════════════════════
+// DEFAULT DATA (seeded from JSON backup)
+// ═══════════════════════════════════════════════════════════
+const DEF_TEAM = [
+  {e:"200857",  n:"Thowheed Mohamed Lukman Ibrahim",           r:"Team Leader / IED",  t:"PERM",  s:"OFFICE/IED",           nx:"IBN ZAHR TA \u2014 QC Lead",        nt:"CSWIP 3.1 & ASNT Level II"},
+  {e:"200989",  n:"Ali Bin Aqeel",                             r:"Sr. Engineer / IED", t:"PERM",  s:"OFFICE/IED",           nx:"AR-RAZI P-V & P-III \u2014 QC Lead",nt:"ASNT Level II"},
+  {e:"201751",  n:"Mohamed Safiullah Mohamed Rafiek",          r:"Sr. Engineer / IED", t:"PERM",  s:"OFFICE/IED",           nx:"MAADEN / United LAO \u2014 QC Lead",nt:"API 510 & ASNT Level II"},
+  {e:"201755",  n:"Manobala Rajendran",                        r:"Manager / IED (MR)", t:"PERM",  s:"OFFICE/IED",           nx:"",                                  nt:"IED Manager & Management Representative"},
+  {e:"201988",  n:"Mariappan Ramachandran",                    r:"Sr. Engineer / IED", t:"PERM",  s:"OFFICE/IED",           nx:"",                                  nt:"ASNT Level II"},
+  {e:"202063",  n:"Mohamed Anash Ibrahim",                     r:"QC Inspector",       t:"PERM",  s:"YARD/IED",             nx:"MAADEN PAU T/A",                    nt:"CSWIP 3.1"},
+  {e:"202064",  n:"Riyas Muttikadavil Muhammed Ismail",        r:"QC Inspector",       t:"PERM",  s:"OFFICE/IED",           nx:"ETH UNITED T/A",                    nt:"CSWIP 3.1 \u2014 confirm competency for dissimilar weld"},
+  {e:"202308",  n:"Amal Phalgu Lisha Phalgunan",               r:"QC Inspector",       t:"PERM",  s:"IBN ZAHR T/A",         nx:"UNITED LAO T/A",                    nt:"CSWIP 3.1 & API 510 \u2014 IBN ZAHR BSO Done, ID Received"},
+  {e:"202311",  n:"Alex Raja Vino Michael Alwin",              r:"QC Inspector",       t:"PERM",  s:"OFFICE/IED",           nx:"",                                  nt:"ASNT Level II"},
+  {e:"202312",  n:"Gajapathi Prakasam",                        r:"QC Inspector",       t:"PERM",  s:"IBN ZAHR T/A",         nx:"",                                  nt:"API 570 \u2014 IBN ZAHR BSO Done, ID Received"},
+  {e:"202341",  n:"Vairakkumar Madasamy Gurusamy",             r:"QC Inspector",       t:"PERM",  s:"YARD/IED",             nx:"",                                  nt:"API 510 & CSWIP 3.1"},
+  {e:"202342",  n:"Karthick Balasubramanian",                  r:"QC Inspector",       t:"PERM",  s:"AR-RAZI V T/A",        nx:"AR-RAZI P-III T/A",                 nt:"CSWIP 3.1"},
+  {e:"TS205377",n:"Syed Sameer Ali",                           r:"QC Inspector",       t:"TEMP",  s:"YARD/IED",             nx:"",                                  nt:"API 510"},
+  {e:"TS205509",n:"Md Arbaj Ali",                              r:"QC Inspector",       t:"TEMP",  s:"IBN ZAHR T/A",         nx:"UNITED LAO T/A",                    nt:"CSWIP 3.1 \u2014 IBN ZAHR BSO Done, Interview Passed"},
+  {e:"TS205526",n:"Sahid Rameez",                              r:"QC Inspector",       t:"TEMP",  s:"AR-RAZI V T/A",        nx:"AR-RAZI P-III T/A",                 nt:"CSWIP 3.1"},
+  {e:"TS205556",n:"Arul Jothy Kumar",                          r:"QC Inspector",       t:"TEMP",  s:"IBN ZAHR T/A",         nx:"",                                  nt:"CSWIP 3.1 \u2014 IBN ZAHR BSO Done, ID not received (Photo TBD)"},
+  {e:"TS205634",n:"Dinesh Kumar Ravi",                         r:"QC Inspector",       t:"TEMP",  s:"YARD/IED",             nx:"ETH UNITED T/A",                    nt:"API 510 \u2014 United LAO accepted, confirm PWHT competency"},
+  {e:"TS205662",n:"Sarath Thaisuvalappil Anilan",              r:"QC Inspector",       t:"TEMP",  s:"MAADEN AMM III/SUPPLY",nx:"UNITED LAO T/A",                    nt:"CSWIP 3.1 \u2014 MAADEN ID Received"},
+  {e:"TS205663",n:"Ravikumar Kalyankumar",                     r:"QC Inspector",       t:"TEMP",  s:"MAADEN AMM III/SUPPLY",nx:"UNITED LAO T/A",                    nt:"API 510 \u2014 MAADEN BSO Done"},
+  {e:"TS205664",n:"Mohammed Shafeeque Karattiparakkal",        r:"QC Inspector",       t:"TEMP",  s:"YARD/IED",             nx:"UNITED LAO T/A",                    nt:"CSWIP 3.1"},
+  {e:"TS205665",n:"Yasier Mohammed Husain Shaikh",             r:"QC Inspector",       t:"TEMP",  s:"AR-RAZI V T/A",        nx:"",                                  nt:"CSWIP 3.1"},
+  {e:"TS205768",n:"Faizan Raza Ansari",                        r:"QC Inspector",       t:"TEMP",  s:"IBN ZAHR T/A",         nx:"UNITED LAO T/A",                    nt:"CSWIP 3.1 \u2014 IBN ZAHR BSO Done, ID EXPIRED \u2014 renewal pending"},
+  {e:"TS205812",n:"Sivam Ramamoorthi",                         r:"QC Inspector",       t:"TEMP",  s:"MAADEN AMM III/SUPPLY",nx:"",                                  nt:"CSWIP 3.1 \u2014 MAADEN ID Received"},
+  {e:"TS205885",n:"Mohd Arif Mohd Aslam Shaikh",               r:"QC Inspector",       t:"TEMP",  s:"IBN ZAHR T/A",         nx:"",                                  nt:"CSWIP 3.1 \u2014 IBN ZAHR BSO Done, ID not received"},
+  {e:"TS205900",n:"Ayyanraj Rengaraj",                         r:"QC Inspector",       t:"TEMP",  s:"ABSCONDED",            nx:"",                                  nt:"CSWIP 3.1 \u2014 Absconded. MAADEN ID was received."},
+  {e:"TS205948",n:"Sakthivel Kuppuraj",                        r:"QC Inspector",       t:"TEMP",  s:"YARD/IED",             nx:"",                                  nt:"CSWIP 3.1 & ASNT Level II \u2014 AR-RAZI rejected in interview"},
+  {e:"TS205949",n:"Vijil Wilfred Rabin",                       r:"QC Inspector",       t:"TEMP",  s:"YARD/IED",             nx:"UNITED LAO T/A",                    nt:"CSWIP 3.1 & ASNT LII \u2014 United LAO accepted"},
+  {e:"TS205950",n:"Mohammed Furkhan",                          r:"QC Inspector",       t:"TEMP",  s:"IBN ZAHR T/A",         nx:"",                                  nt:"BE & ASNT Level II \u2014 IBN ZAHR BSO TBD, ID not received"},
+  {e:"TS205981",n:"Manojkumar Madasamy Gurusamy",              r:"QC Engineer",        t:"TEMP",  s:"YARD/IED",             nx:"",                                  nt:"AR-RAZI SPC planned"},
+  {e:"TS205985",n:"Anantha Kumar Tamada",                      r:"QC Engineer",        t:"TEMP",  s:"YARD/IED",             nx:"UNITED LAO T/A",                    nt:"CSWIP 3.1 & ASNT LII \u2014 United LAO accepted, visa processing"},
+  {e:"Z107425", n:"Abdul Wahid Penathmatta",                   r:"QA/QC Engineer",     t:"LOCAL", s:"YARD/IED",             nx:"",                                  nt:"AR-RAZI interview passed, planned"},
+  {e:"ZXXXXXXXX",n:"DAVOOD",                                   r:"QC Inspector",       t:"LOCAL", s:"YARD/IED",             nx:"IBNZAHR TA",                         nt:""},
+  {e:"ZXXXXXXX", n:"MOHD SHAFWAN",                             r:"QC Inspector",       t:"LOCAL", s:"YARD/IED",             nx:"IBNZAHR TA",                         nt:"yenyes"},
+  {e:"ZXXXXX",   n:"Jasweer Muhammed",                         r:"QC Inspector",       t:"LOCAL", s:"YARD/IED",             nx:"ARRAZI PLANT V",                     nt:"HSGC"},
+  {e:"ZXXXX12",  n:"ABOOBASEER SAHEED",                        r:"QC Inspector",       t:"LOCAL", s:"YARD/IED",             nx:"IBNZAHR TA",                         nt:"YENES"},
+  {e:"ZXXXX",    n:"Aqeeb Ahmed Khan",                         r:"QC Inspector",       t:"LOCAL", s:"YARD/IED",             nx:"ARRAZI PLANT V",                     nt:"HSGC"},
+  {e:"ZXXXXXX13",n:"Azhar",                                    r:"QC Inspector",       t:"LOCAL", s:"YARD/IED",             nx:"ARRAZI PLANT V",                     nt:"HSGC"},
+  {e:"TSXXX",    n:"RIYAZ AHMED",                              r:"QC Inspector",       t:"TEMP",  s:"YARD/IED",             nx:"ARRAZI PLANT III",                   nt:"YET TO MOBILIZE"},
+  {e:"TSXXXX1",  n:"VASANTH RAJ",                              r:"QC Inspector",       t:"TEMP",  s:"YARD/IED",             nx:"ARRAZI PLANT III TA",                nt:"24TH MOBILIZATION"}
+];
+
+const DEF_TAS = [
+  {id:"IBZ",              cl:"IBN ZAHR",  nm:"IBN ZAHR TA 2026",       ld:"Thowheed", st:"2026-03-21",ed:"2026-04-10",rd:5, rn:5, col:"#1d4ed8",sk:"IBN ZAHR T/A",    nt:"ANDT vendor (DELTA) pending SABIC approval. Faizan ID expired, Furkhan ID pending."},
+  {id:"ARR5",             cl:"AR-RAZI",   nm:"AR-RAZI P-V Major TA",   ld:"Ali Bin",  st:"2026-03-22",ed:"2026-04-16",rd:4, rn:4, col:"#6d28d9",sk:"AR-RAZI V T/A",   nt:"WPS-PQR (9 sets) + Weld Maps pending client approval."},
+  {id:"MPAU",             cl:"MAADEN",    nm:"MAADEN PAU",             ld:"Not Assigned",st:"2026-04-08",ed:"2026-04-15",rd:1,rn:1, col:"#15803d",sk:"MAADEN PAU T/A", nt:"WPS development pending. Mobilization April 8."},
+  {id:"ULA",              cl:"UNITED",    nm:"UNITED LAO TA 2026",     ld:"Safiullah",st:"2026-04-16",ed:"2026-05-12",rd:9, rn:9, col:"#a16207",sk:"UNITED LAO T/A",   nt:"WQT 6 welders pending. 16 finalized + hiring slots open."},
+  {id:"ARR3",             cl:"AR-RAZI",   nm:"AR-RAZI P-III TA",       ld:"Ali Bin",  st:"2026-04-11",ed:"2026-05-31",rd:8, rn:8, col:"#64748b",sk:"AR-RAZI P-III T/A",nt:"Starts 11-Apr \u2014 overlaps with P-V (ends 16-Apr). Check P-V/P-III dual assignments."},
+  {id:"TA_1773821356675", cl:"MAADEN",    nm:"MAADEN AMM 3",           ld:"",         st:"2026-03-16",ed:"2026-04-30",rd:1, rn:1, col:"#1d4ed8",sk:"MAADEN AMM 3",     nt:""}
+];
+
+// MP assignments from JSON backup — all preserved
+const DEF_MP = {
+  "202308__IBZ":{role:"Day",start:"",end:""},"202312__IBZ":{role:"Day",start:"",end:""},
+  "TS205556__IBZ":{role:"Day",start:"",end:""},"TS205768__IBZ":{role:"Night",start:"",end:""},
+  "TS205885__IBZ":{role:"Night",start:"",end:""},"TS205950__IBZ":{role:"Night",start:"",end:""},
+  "TS205509__IBZ":{role:"Day",start:"",end:""},"201988__IBZ":{role:"Lead",start:"",end:""},
+  "ZXXXXXXXX__IBZ":{role:"Day",start:"",end:""},"ZXXXXXXX__IBZ":{role:"Night",start:"",end:""},
+  "ZXXXXX__IBZ":{role:"Night",start:"",end:""},"TS205663__IBZ":{role:"Support",start:"",end:""},
+  "TS205949__IBZ":{role:"Support",start:"",end:""},"ZXXXX12__IBZ":{role:"Day",start:"",end:""},
+  "202342__ARR5":{role:"Day",start:"",end:""},"TS205526__ARR5":{role:"Day",start:"",end:""},
+  "TS205665__ARR5":{role:"Day",start:"",end:""},"202341__ARR5":{role:"Day",start:"",end:""},
+  "Z107425__ARR5":{role:"Night",start:"",end:""},"202063__ARR5":{role:"Night",start:"",end:""},
+  "ZXXXXX__ARR5":{role:"Night",start:"",end:""},"ZXXXX__ARR5":{role:"Day",start:"",end:""},
+  "ZXXXXXX13__ARR5":{role:"Night",start:"",end:""},
+  "TS205662__MPAU":{role:"Day",start:"",end:""},"TS205812__MPAU":{role:"Night",start:"",end:""},
+  "201751__ULA":{role:"Lead",start:"",end:""},"202064__ULA":{role:"Lead",start:"",end:""},
+  "TS205634__ULA":{role:"Day",start:"",end:""},"TS205663__ULA":{role:"Night",start:"",end:""},
+  "TS205662__ULA":{role:"Day",start:"",end:""},"TS205509__ULA":{role:"Night",start:"",end:""},
+  "TS205664__ULA":{role:"Day",start:"",end:""},"TS205949__ULA":{role:"Night",start:"",end:""},
+  "202308__ULA":{role:"Day",start:"",end:""},"TS205768__ULA":{role:"Day",start:"",end:""},
+  "TS205985__ULA":{role:"Day",start:"",end:""},"ZXXXXXXXX__ULA":{role:"Day",start:"",end:""},
+  "TS205885__ULA":{role:"Support",start:"",end:""},
+  "200989__ARR3":{role:"Lead",start:"",end:""},"202342__ARR3":{role:"Day",start:"",end:""},
+  "TS205526__ARR3":{role:"Night",start:"",end:""},"202341__ARR3":{role:"Lead",start:"",end:""},
+  "202063__ARR3":{role:"Day",start:"",end:""},"TS205556__ARR3":{role:"Day",start:"",end:""},
+  "ZXXXXX__ARR3":{role:"Day",start:"",end:""},"ZXXXXXX13__ARR3":{role:"Night",start:"",end:""},
+  "ZXXXX__ARR3":{role:"Day",start:"",end:""},"TS205665__ARR3":{role:"Day",start:"",end:""},
+  "TS205948__ARR3":{role:"Day",start:"",end:""},"TS205950__ARR3":{role:"Night",start:"",end:""},
+  "TS205981__ARR3":{role:"Day",start:"",end:""},"Z107425__ARR3":{role:"Day",start:"",end:""},
+  "TSXXX__ARR3":{role:"Day",start:"",end:""},"TSXXXX1__ARR3":{role:"Night",start:"",end:""},
+  "202312__ARR3":{role:"Night",start:"",end:""},
+  "TS205662__TA_1773821356675":{role:"Day",start:"",end:""},"TS205812__TA_1773821356675":{role:"Night",start:"",end:""}
+};
+
+const DEF_IDS = {
+  "202063":{ibz:"",arr:"",mad:"PENDING",utd:"",sip:"",sab:""},
+  "202064":{ibz:"",arr:"",mad:"PENDING",utd:"",sip:"",sab:""},
+  "202308":{ibz:"ACTIVE",arr:"",mad:"ACTIVE",utd:"",sip:"",sab:""},
+  "202312":{ibz:"ACTIVE"},
+  "202342":{arr:"ACTIVE"},
+  "TS205509":{ibz:"ACTIVE",arr:"",mad:"PENDING",utd:"",sip:"",sab:""},
+  "TS205556":{ibz:"PENDING",arr:"ACTIVE",mad:"",utd:"",sip:"",sab:""},
+  "TS205885":{ibz:"PENDING",arr:"",mad:"RENEWAL",utd:"",sip:"",sab:""},
+  "TS205768":{ibz:"RENEWAL",utd:"ACTIVE"},
+  "TS205950":{ibz:"PENDING"},
+  "TS205526":{arr:"ACTIVE"},
+  "TS205665":{arr:"ACTIVE"},
+  "TS205662":{mad:"ACTIVE",utd:"ACTIVE"},
+  "TS205812":{mad:"ACTIVE"},
+  "TS205900":{mad:"ACTIVE"},
+  "TS205634":{ibz:"",arr:"",mad:"PENDING",utd:"ACTIVE",sip:"",sab:""},
+  "TS205663":{ibz:"",arr:"",mad:"PENDING",utd:"ACTIVE",sip:"",sab:""},
+  "TS205664":{utd:"ACTIVE"},
+  "TS205949":{utd:"ACTIVE"},
+  "ZXXXXXX13":{ibz:"",arr:"PENDING",mad:"",utd:"",sip:"",sab:""},
+  "ZXXXX":{ibz:"",arr:"PENDING",mad:"",utd:"",sip:"",sab:""},
+  "ZXXXXX":{ibz:"",arr:"PENDING",mad:"",utd:"",sip:"",sab:""},
+  "200857":{ibz:"ACTIVE"},"201988":{ibz:"ACTIVE"},
+  "201751":{utd:"ACTIVE"}
+};
+
+const DEF_QUALS = {
+  "200857":{ot:"CSWIP 3.1 & ASNT Level II"},"200989":{ot:"ASNT Level II"},
+  "201751":{ot:"API 510 & ASNT Level II"},"201988":{ot:"ASNT Level II"},
+  "202341":{ot:"API 510 & CSWIP 3.1"},"202064":{ot:"CSWIP 3.1"},
+  "202063":{ot:"CSWIP 3.1"},"202342":{ot:"CSWIP 3.1"},
+  "202308":{ot:"CSWIP 3.1 & API 510"},"202311":{ot:"ASNT Level II"},
+  "202312":{ot:"API 570"},"TS205509":{ot:"CSWIP 3.1"},
+  "TS205526":{ot:"CSWIP 3.1"},"TS205556":{ot:"CSWIP 3.1"},
+  "TS205634":{ot:"API 510"},"TS205662":{ot:"CSWIP 3.1"},
+  "TS205663":{ot:"API 510"},"TS205664":{ot:"CSWIP 3.1"},
+  "TS205665":{ot:"CSWIP 3.1"},"TS205768":{ot:"CSWIP 3.1"},
+  "TS205812":{ot:"CSWIP 3.1"},"TS205885":{ot:"CSWIP 3.1"},
+  "TS205377":{ot:"API 510"},"TS205949":{ot:"CSWIP 3.1 & ASNT LII"},
+  "TS205950":{ot:"BE & ASNT LII"},"TS205948":{ot:"CSWIP 3.1 & ASNT LII"},
+  "TS205981":{ot:"QC Engineer"},"TS205985":{ot:"CSWIP 3.1 & ASNT LII"}
+};
+
+// ═══════════════════════════════════════════════════════════
+// STORAGE
+// ═══════════════════════════════════════════════════════════
+let D = {};
+function mkDef(){return{team:JSON.parse(JSON.stringify(DEF_TEAM)),tas:JSON.parse(JSON.stringify(DEF_TAS)),quals:JSON.parse(JSON.stringify(DEF_QUALS)),ids:JSON.parse(JSON.stringify(DEF_IDS)),mp:JSON.parse(JSON.stringify(DEF_MP)),saved:null};}
+function normMP(mp){if(!mp)return{};Object.keys(mp).forEach(k=>{if(typeof mp[k]==="string")mp[k]={role:mp[k],start:"",end:""};});return mp;}
+function loadLocal(){
+  try{const r=localStorage.getItem(SK);D=r?JSON.parse(r):mkDef();}catch(e){D=mkDef();}
+  if(!D.team)D.team=JSON.parse(JSON.stringify(DEF_TEAM));
+  if(!D.tas) D.tas=JSON.parse(JSON.stringify(DEF_TAS));
+  if(!D.quals)D.quals=JSON.parse(JSON.stringify(DEF_QUALS));
+  if(!D.ids) D.ids=JSON.parse(JSON.stringify(DEF_IDS));
+  if(!D.mp)  D.mp=JSON.parse(JSON.stringify(DEF_MP));
+  D.mp=normMP(D.mp);
+}
+function save(){D.saved=new Date().toISOString();try{localStorage.setItem(SK,JSON.stringify(D));}catch(e){}updSv();}
+function updSv(){if(!D.saved)return;const ts=new Date(D.saved);document.getElementById("sv").textContent="Saved: "+ts.toLocaleDateString("en-GB",{day:"2-digit",month:"short"})+" "+ts.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"});}
+function resetD(){D=mkDef();save();renAct();}
+function expBk(){
+  const combined={dashboard:D,doctracker:{docs:dtDocs,nid:dtNid},exported:new Date().toISOString()};
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(combined,null,2)],{type:"application/json"}));
+  a.download="IED_Dashboard.json";
+  a.click();URL.revokeObjectURL(a.href);
+}
+function impBk(e){
+  const f=e.target.files[0];if(!f)return;
+  const rd=new FileReader();
+  rd.onload=ev=>{
+    try{
+      const imp=JSON.parse(ev.target.result);
+      // Support both combined format and legacy dashboard-only format
+      if(imp.dashboard){
+        D=imp.dashboard;D.mp=normMP(D.mp||{});
+        if(imp.doctracker){dtDocs=imp.doctracker.docs||[];dtNid=imp.doctracker.nid||400;dtSave();}
+        save();renAct();
+        alert("Loaded: "+D.team.length+" members, "+D.tas.length+" TAs, "+dtDocs.length+" doc items.");
+      } else if(imp.team&&imp.tas){
+        D=imp;D.mp=normMP(D.mp||{});save();renAct();
+        alert("Dashboard loaded: "+D.team.length+" members, "+D.tas.length+" TAs.");
+      } else if(imp.docs){
+        dtDocs=imp.docs||[];dtNid=imp.nid||400;dtSave();
+        if(document.getElementById("p-dt").classList.contains("active"))dtRender();
+        alert("Doc tracker loaded: "+dtDocs.length+" items.");
+      } else {alert("Invalid backup file.");}
+    }catch(err){alert("Could not read: "+err.message);}
+  };
+  rd.readAsText(f);e.target.value="";
+}
+
+// ═══════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════
+const TODAY=new Date("2026-03-18");
+function dFmt(s){if(!s)return"—";return new Date(s).toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"});}
+function dSh(s){if(!s)return"—";return new Date(s).toLocaleDateString("en-GB",{day:"2-digit",month:"short"});}
+function dU(s){if(!s)return null;return Math.round((new Date(s)-TODAY)/86400000);}
+function cSt(exp){if(!exp)return{c:"tx3",l:"—"};const d=dU(exp);if(d<0)return{c:"red",l:"EXPIRED"};if(d<30)return{c:"red",l:d+"d left"};if(d<90)return{c:"yel",l:d+"d left"};return{c:"green",l:"Valid"};}
+
+function sTag(s){if(!s)return"";const u=s.toUpperCase();
+  if(u.includes("IBN ZAHR"))return`<span class="stag s-ibz">IBN ZAHR</span>`;
+  if(u.includes("AR-RAZI V")||u==="AR-RAZI V T/A")return`<span class="stag s-arr">AR-RAZI P-V</span>`;
+  if(u.includes("AR-RAZI P-III"))return`<span class="stag s-arr">AR-RAZI P-III</span>`;
+  if(u.includes("MAADEN"))return`<span class="stag s-mad">MAADEN</span>`;
+  if(u.includes("UNITED LAO"))return`<span class="stag s-utd">UNITED LAO</span>`;
+  if(u.includes("ETH"))return`<span class="stag s-eth">ETH UNITED</span>`;
+  if(u.includes("CHEMANOL"))return`<span class="stag s-mad">CHEMANOL</span>`;
+  if(u.includes("ABSCONDED"))return`<span class="stag s-abs">Absconded</span>`;
+  if(u.includes("OFFICE"))return`<span class="stag s-off">Office/IED</span>`;
+  if(u.includes("YARD"))return`<span class="stag s-yrd">Yard/IED</span>`;
+  return`<span class="stag s-off">${s}</span>`;}
+function sBadge(s){const u=(s||"").toUpperCase();
+  if(u.includes("ABSCONDED"))return`<span class="badge b-abs"><span class="dot" style="background:var(--red)"></span>Absconded</span>`;
+  if(u==="LEAVE")return`<span class="badge b-lv"><span class="dot" style="background:var(--yel)"></span>Leave</span>`;
+  if(u.includes("T/A")||u.includes("SUPPLY"))return`<span class="badge b-on"><span class="dot" style="background:var(--green)"></span>On Site</span>`;
+  if(u.includes("YARD"))return`<span class="badge b-yrd"><span class="dot" style="background:var(--tl)"></span>Yard</span>`;
+  return`<span class="badge b-off"><span class="dot" style="background:var(--tx2)"></span>Office</span>`;}
+function idBdg(v){if(!v)return`<span style="color:var(--tx3);font-size:10px">—</span>`;
+  const m={ACTIVE:"id-a",PENDING:"id-p",EXPIRED:"id-e",RENEWAL:"id-r",NA:"id-n"};
+  const l={ACTIVE:"✓ Active",PENDING:"⏳ Pending",EXPIRED:"✗ Expired",RENEWAL:"↻ Renewal",NA:"N/A"};
+  return`<span class="id-b ${m[v]||"id-n"}">${l[v]||v}</span>`;}
+function tBdg(t){if(t==="PERM")return`<span class="tp tp-p">PERM</span>`;if(t==="TEMP")return`<span class="tp tp-t">TS</span>`;if(t==="LOCAL")return`<span class="tp tp-l">Z</span>`;return t;}
+
+// MP helpers
+function mpK(e,tid){return e+"__"+tid;}
+function getMPA(e,tid){const v=D.mp[mpK(e,tid)];if(!v)return null;if(typeof v==="string")return{role:v,start:"",end:""};return v;}
+function getMPR(e,tid){const a=getMPA(e,tid);return a?a.role:"";}
+function rcls(r){return r==="Day"?"r-day":r==="Night"?"r-ngt":r==="Lead"?"r-ld":r==="Support"?"r-sup":"r-no";}
+
+// Effective dates for an assignment (custom overrides TA dates)
+function asgD(e,tid){
+  const a=getMPA(e,tid);const ta=D.tas.find(t=>t.id===tid);if(!ta)return null;
+  return{start:a&&a.start?a.start:ta.st,end:a&&a.end?a.end:ta.ed,custom:!!(a&&(a.start||a.end))};
+}
+
+// Overlap detection for a person
+function getOverlaps(e){
+  const asgns=D.tas.map(t=>({tid:t.id,role:getMPR(e,t.id)})).filter(x=>x.role);
+  const ovlps=[];
+  for(let i=0;i<asgns.length;i++){
+    const d1=asgD(e,asgns[i].tid);if(!d1)continue;
+    const s1=new Date(d1.start),e1=new Date(d1.end);
+    for(let j=i+1;j<asgns.length;j++){
+      const d2=asgD(e,asgns[j].tid);if(!d2)continue;
+      const s2=new Date(d2.start),e2=new Date(d2.end);
+      if(s1<=e2&&s2<=e1)ovlps.push({ta1:asgns[i].tid,ta2:asgns[j].tid});
+    }
+  }
+  return ovlps;
+}
+
+// ═══════════════════════════════════════════════════════════
+// OVERVIEW
+// ═══════════════════════════════════════════════════════════
+function renOV(){
+  const ins=D.team.filter(m=>!m.r.includes("Manager"));
+  const onS=ins.filter(m=>m.s&&(m.s.includes("T/A")||m.s.includes("SUPPLY")));
+  const avl=ins.filter(m=>m.s&&(m.s.includes("YARD")||m.s.includes("OFFICE")));
+  const abs=ins.filter(m=>m.s&&m.s.includes("ABSCONDED"));
+  const act=D.tas.filter(t=>new Date(t.st)<=new Date("2026-05-01")&&new Date(t.ed)>=TODAY);
+  const up=D.tas.filter(t=>new Date(t.st)>TODAY);
+  document.getElementById("sg").innerHTML=`
+    <div class="sv blue"><div class="sn">${D.team.length}</div><div class="sl">Total Team</div></div>
+    <div class="sv green"><div class="sn">${onS.length}</div><div class="sl">On Site</div></div>
+    <div class="sv yellow"><div class="sn">${avl.length}</div><div class="sl">Available</div></div>
+    <div class="sv orange"><div class="sn">${act.length}</div><div class="sl">Active TAs</div></div>
+    <div class="sv purple"><div class="sn">${up.length}</div><div class="sl">Upcoming TAs</div></div>
+    <div class="sv red"><div class="sn">${abs.length}</div><div class="sl">Absconded</div></div>`;
+
+  // ── Doc Tracker Health ─────────────────────────────────────
+  if(typeof dtDocs !== 'undefined' && dtDocs.length){
+    const open=dtDocs.filter(d=>!dtIsDone(d.status));
+    const pending=open.filter(d=>d.status==='Pending').length;
+    const submitted=open.filter(d=>d.status==='Submitted').length;
+    const inprog=open.filter(d=>d.status==='In Progress').length;
+    const blocked=open.filter(d=>d.status==='Blocked').length;
+    const approved=dtDocs.filter(d=>d.status==='Approved'||d.status==='Done').length;
+    const overdue=open.filter(d=>d.dueDate&&dtDaysLeft(d.dueDate)<0).length;
+    const total=dtDocs.length;
+
+    // Updated timestamp
+    const lastUpd=dtDocs.reduce((mx,d)=>d.updated>mx?d.updated:mx,'');
+    const updEl=document.getElementById("ov-dt-updated");
+    if(updEl)updEl.textContent="Last updated: "+lastUpd+" · "+total+" total items";
+
+    // Mini stat pills
+    const statHtml=[
+      {lbl:"Pending",   val:pending,   col:"var(--red)"},
+      {lbl:"Submitted", val:submitted, col:"var(--yel)"},
+      {lbl:"In Progress",val:inprog,   col:"var(--blue)"},
+      {lbl:"Blocked",   val:blocked,   col:"var(--pur)"},
+      {lbl:"Done/Approved",val:approved,col:"var(--green)"},
+      {lbl:"Overdue",   val:overdue,   col:"var(--red)"},
+    ].map(s=>`<div style="background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r);padding:6px 12px;display:flex;align-items:center;gap:7px">
+      <span style="font-family:var(--mono);font-size:18px;font-weight:600;color:${s.col}">${s.val}</span>
+      <span style="font-size:10px;color:var(--tx2)">${s.lbl}</span>
+    </div>`).join("");
+    const statsEl=document.getElementById("ov-dt-stats");
+    if(statsEl)statsEl.innerHTML=statHtml;
+
+    // Per-project progress bars
+    const projs=DT_TABS;
+    const projHtml=projs.map(p=>{
+      const pDocs=dtDocs.filter(d=>d.project===p);
+      if(!pDocs.length)return'';
+      const pTotal=pDocs.length;
+      const pDone=pDocs.filter(d=>dtIsDone(d.status)).length;
+      const pBlocked=pDocs.filter(d=>d.status==='Blocked').length;
+      const pUrgent=pDocs.filter(d=>d.pri==='Urgent'&&!dtIsDone(d.status)).length;
+      const pct=Math.round(pDone/pTotal*100);
+      const barCol=pBlocked>0?'var(--pur)':pUrgent>0?'var(--red)':'var(--green)';
+      const clsMap={'IBN ZAHR':'s-ibz','AR-RAZI P-III':'s-arr','AR-RAZI P-V':'s-arr','UNITED LAO':'s-utd','MAADEN PAU':'s-mad','ETH UNITED':'s-eth','QMS':'s-qms','ADMIN':'s-off'};
+      return`<div style="margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="stag ${clsMap[p]||'s-off'}">${p}</span>
+            ${pUrgent?`<span style="font-size:9px;color:var(--red);font-weight:700">🔴 ${pUrgent} urgent</span>`:''}
+            ${pBlocked?`<span style="font-size:9px;color:var(--pur);font-weight:700">⛔ ${pBlocked} blocked</span>`:''}
+          </div>
+          <span style="font-family:var(--mono);font-size:10px;color:var(--tx2)">${pDone}/${pTotal} done &nbsp; ${pct}%</span>
+        </div>
+        <div style="height:5px;background:var(--bg4);border-radius:3px;overflow:hidden">
+          <div style="height:100%;width:${pct}%;background:${barCol};border-radius:3px;transition:width .4s"></div>
+        </div>
+      </div>`;
+    }).join('');
+    const projEl=document.getElementById("ov-dt-projects");
+    if(projEl)projEl.innerHTML=projHtml;
+
+    // Urgent + overdue doc items
+    const urgentDocs=open.filter(d=>d.pri==='Urgent'||d.status==='Blocked'||(d.dueDate&&dtDaysLeft(d.dueDate)<0))
+      .sort((a,b)=>{const o=v=>v.status==='Blocked'?-2:dtDaysLeft(v.dueDate)<0?-1:0;return o(a)-o(b)||DT_PO[a.pri]-DT_PO[b.pri];})
+      .slice(0,8);
+    const urgEl=document.getElementById("ov-dt-urgent");
+    const urgCnt=document.getElementById("ov-dt-urgent-count");
+    if(urgCnt)urgCnt.textContent=open.filter(d=>d.pri==='Urgent'||d.status==='Blocked').length+" open";
+    if(urgEl)urgEl.innerHTML=urgentDocs.length?urgentDocs.map(d=>{
+      const dl=dtDaysLeft(d.dueDate);
+      const isOvlp=dl!==null&&dl<0;
+      const isBlk=d.status==='Blocked';
+      const bg=isBlk?'var(--purb)':isOvlp?'var(--redb)':d.pri==='Urgent'?'var(--redb)':'var(--yelb)';
+      const bc=isBlk?'var(--pur)':isOvlp?'var(--red)':d.pri==='Urgent'?'var(--red)':'var(--yel)';
+      const clsMap={'IBN ZAHR':'s-ibz','AR-RAZI P-III':'s-arr','AR-RAZI P-V':'s-arr','UNITED LAO':'s-utd','MAADEN PAU':'s-mad','ETH UNITED':'s-eth','QMS':'s-qms','ADMIN':'s-off'};
+      return`<div style="display:flex;gap:10px;padding:8px 10px;margin-bottom:6px;background:${bg};border-left:3px solid ${bc};border-radius:4px;cursor:pointer" onclick="swTab(document.querySelector('[data-tab=dt]'));setTimeout(()=>dtSwTab('${d.project}'),100)">
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:2px">
+            <span class="stag ${clsMap[d.project]||'s-off'}" style="font-size:9px">${d.project}</span>
+            <span style="font-size:9px;font-weight:700;font-family:var(--mono);color:${bc}">${isBlk?'⛔ BLOCKED':isOvlp?Math.abs(dl)+'d OVERDUE':d.pri}</span>
+          </div>
+          <div style="font-weight:500;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.docName}</div>
+          <div style="font-size:10px;color:var(--tx2);margin-top:1px">${d.owner}</div>
+        </div>
+        <div style="font-size:9px;color:var(--tx2);font-family:var(--mono);flex-shrink:0;text-align:right">
+          ${d.dueDate?dtFmtDate(d.dueDate):''}
+        </div>
+      </div>`;
+    }).join(''):`<div style="color:var(--green);font-size:12px;font-weight:500">✓ No urgent or overdue items</div>`;
+  } else {
+    ['ov-dt-stats','ov-dt-projects','ov-dt-urgent'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<div style="color:var(--tx2);font-size:11px">Loading doc tracker data…</div>';});
+  }
+
+  // ── People alerts ──────────────────────────────────────────
+  document.getElementById("als").innerHTML=[
+    {t:"al-u",i:"🔴",tt:"IBN ZAHR starts 21-Mar",d:"Thowheed leading (201988 as day lead). Faizan ID RENEWAL + Furkhan ID PENDING."},
+    {t:"al-u",i:"🔴",tt:"AR-RAZI P-V & P-III OVERLAP",d:"P-V ends 16-Apr, P-III starts 11-Apr. 5-day overlap window. Check dual assignments."},
+    {t:"al-w",i:"🟡",tt:"MAADEN PAU mob 8-Apr",d:"QC Lead not assigned. Only 2 slots (1D/1N). Short window — 8-15 Apr."},
+    {t:"al-w",i:"🟡",tt:"United LAO WQT — 6 welders pending",d:"Jithin to confirm min 6 welders. Eid deadline. 9D/9N required — large requirement."},
+    {t:"al-i",i:"🔵",tt:"Ayyanraj (TS205900) — Absconded",d:"Remove from planning. MAADEN AMM3 assignment still in MP — clear it."},
+  ].map(a=>`<div class="al ${a.t}"><div style="font-size:14px;flex-shrink:0">${a.i}</div><div><div class="at">${a.tt}</div><div class="ad">${a.d}</div></div></div>`).join("");
+
+  // ── Active TAs ─────────────────────────────────────────────
+  const show=D.tas.filter(t=>new Date(t.ed)>=TODAY).slice(0,6);
+  document.getElementById("taq").innerHTML=show.map(t=>{
+    const dE=dU(t.ed);const pg=Math.max(0,Math.min(100,Math.round((TODAY-new Date(t.st))/(new Date(t.ed)-new Date(t.st))*100)));
+    // Count doc items for this TA from tracker
+    const taKey=t.nm.includes('IBN ZAHR')?'IBN ZAHR':t.nm.includes('P-III')?'AR-RAZI P-III':t.nm.includes('P-V')?'AR-RAZI P-V':t.nm.includes('UNITED LAO')?'UNITED LAO':t.nm.includes('MAADEN')?'MAADEN PAU':t.nm.includes('ETH')?'ETH UNITED':'';
+    const taDocs=taKey&&typeof dtDocs!=='undefined'?dtDocs.filter(d=>d.project===taKey):[];
+    const taOpen=taDocs.filter(d=>!dtIsDone(d.status)).length;
+    const taUrgent=taDocs.filter(d=>d.pri==='Urgent'&&!dtIsDone(d.status)).length;
+    return`<div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--bd)">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div><div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--tx2)">${t.cl}</div><div style="font-weight:600;font-size:12px">${t.nm}</div></div>
+        <span style="font-family:var(--mono);font-size:10px;color:${dE<7?"var(--red)":dE<14?"var(--yel)":"var(--tx2)"};margin-left:8px;flex-shrink:0">${dE>0?dE+"d":dE===0?"Today":"Done"}</span>
+      </div>
+      <div class="pbar" style="margin-top:6px"><div class="pf" style="width:${pg}%;background:${t.col}"></div></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
+        <div style="font-size:10px;color:var(--tx2)">Lead: <span style="color:var(--tx);font-weight:500">${t.ld||"Not assigned"}</span></div>
+        ${taKey?`<div style="font-size:10px;font-family:var(--mono);color:${taUrgent?"var(--red)":"var(--tx2)"}">${taOpen} docs open${taUrgent?" · "+taUrgent+" urgent":""}</div>`:''}
+      </div>
+    </div>`;
+  }).join("")||"<div style='color:var(--tx2);font-size:12px'>No active TAs</div>";
+
+  // ── Deployment snapshot ────────────────────────────────────
+  const sites={};D.team.forEach(m=>{const sk=m.s||"OFFICE/IED";if(!sites[sk])sites[sk]=[];sites[sk].push(m.n.split(" ")[0]);});
+  document.getElementById("ds").innerHTML="<div style='display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px'>"+Object.entries(sites).map(([sk,ns])=>`<div style="background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r);padding:10px 12px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">${sTag(sk)}<span style="font-family:var(--mono);font-size:10px;color:var(--tx2)">${ns.length}</span></div><div style="font-size:11px;color:var(--tx2)">${ns.join(", ")}</div></div>`).join("")+"</div>";
+}
+
+// ═══════════════════════════════════════════════════════════
+// TA SCHEDULE
+// ═══════════════════════════════════════════════════════════
+function renSC(){
+  document.getElementById("tg").innerHTML=D.tas.map(t=>{
+    const dS=dU(t.st),dE=dU(t.ed);
+    const status=dS>0?"Starts in "+dS+"d":dE>=0?dE+"d remaining":"Completed";
+    const sc=dS>0?"var(--blue)":dE>=0?"var(--green)":"var(--tx3)";
+    return`<div class="tac"><div class="ta-stripe" style="background:${t.col}"></div>
+      <div class="tah"><div class="ta-cl">${t.cl}</div><div class="ta-nm">${t.nm}</div><div class="ta-dt">${dSh(t.st)} → ${dSh(t.ed)}</div><div style="font-size:10px;font-weight:600;color:${sc};margin-top:4px">${status}</div></div>
+      <div class="tab2"><div class="ta-st">
+        <div class="ta-si"><div class="ta-sn2" style="color:${t.col}">${t.rd}</div><div class="ta-sl2">Day</div></div>
+        <div class="ta-si"><div class="ta-sn2" style="color:${t.col}">${t.rn}</div><div class="ta-sl2">Night</div></div>
+        <div class="ta-si"><div class="ta-sn2" style="color:${t.col}">${t.rd+t.rn}</div><div class="ta-sl2">Total</div></div>
+      </div>
+      <div class="ta-lead">Lead: <b>${t.ld||"Not assigned"}</b></div>
+      ${t.nt?`<div style="font-size:10px;color:var(--tx2);margin-top:6px;padding-top:6px;border-top:1px solid var(--bd)">${t.nt}</div>`:""}</div>
+      <div style="padding:7px 14px 7px 18px;border-top:1px solid var(--bd);background:var(--bg3)"><button class="btn bo bxs" onclick="openTA('${t.id}')">✏ Edit</button></div></div>`;
+  }).join("");
+  // Mini TA Gantt
+  const GS=new Date("2026-03-15"),GE=new Date("2026-06-10"),tot=(GE-GS)/86400000;
+  const pc=d=>((d-GS)/86400000/tot*100).toFixed(2);const tp=pc(TODAY);const LW=185;
+  let mh="";[["Mar","2026-03-01"],["Apr","2026-04-01"],["May","2026-05-01"],["Jun","2026-06-01"]].forEach(([l,dt])=>{const d=new Date(dt);if(d>=GS&&d<=GE)mh+=`<span style="position:absolute;left:${pc(d)}%;font-size:9px;color:var(--tx3);font-family:var(--mono);padding-left:3px">${l} 26</span>`;});
+  let rows=`<div style="display:grid;grid-template-columns:${LW}px 1fr;border-bottom:1px solid var(--bd);background:var(--bg3)"><div style="padding:5px 12px;font-size:10px;color:var(--tx2);font-weight:600;border-right:1px solid var(--bd)">TA PROJECT</div><div style="position:relative;height:18px">${mh}<div class="gtd" style="left:${tp}%"><span class="gtdl">TODAY</span></div></div></div>`;
+  D.tas.forEach(t=>{const l=Math.max(0,pc(new Date(t.st)));const w=Math.max(0.5,Math.min(100-l,pc(new Date(t.ed))-l));const done=new Date(t.ed)<TODAY;rows+=`<div style="display:grid;grid-template-columns:${LW}px 1fr;border-bottom:1px solid var(--bd)" onmouseenter="this.style.background='var(--bg3)'" onmouseleave="this.style.background=''"><div style="padding:5px 12px;border-right:1px solid var(--bd);font-size:11px;font-weight:500${done?";color:var(--tx3)":""}">${t.cl.split("/")[0].trim()}<br><span style="font-size:9px;color:var(--tx2)">${t.nm.length>24?t.nm.slice(0,24)+"…":t.nm}</span></div><div style="position:relative;height:30px"><div class="gtd" style="left:${tp}%"></div><div style="position:absolute;left:${l}%;width:${w}%;height:20px;top:5px;border-radius:3px;background:${t.col};opacity:${done?.4:.85};display:flex;align-items:center;padding:0 7px;font-size:10px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden">${t.ld||"—"}</div></div></div>`;});
+  document.getElementById("minig").innerHTML=rows;
+}
+
+// ═══════════════════════════════════════════════════════════
+// MANPOWER PLANNING
+// ═══════════════════════════════════════════════════════════
+function renMP(){
+  // Populate TA filter
+  const taFEl=document.getElementById("mpFTA");
+  const curTA=taFEl.value;
+  taFEl.innerHTML="<option value=''>All TAs</option>"+D.tas.map(t=>`<option value="${t.id}">${t.nm}</option>`).join("");
+  if(curTA)taFEl.value=curTA;
+
+  const fShow=document.getElementById("mpFShow").value;
+  const fTA=document.getElementById("mpFTA").value;
+  const fRole=document.getElementById("mpFRole").value;
+  const fType=(document.getElementById("mpFType")||{}).value||"";
+  const fName=(document.getElementById("mpFName").value||"").toLowerCase();
+
+  let tas=D.tas.slice();
+  if(fShow==="active")tas=tas.filter(t=>new Date(t.ed)>=TODAY);
+  if(fTA)tas=tas.filter(t=>t.id===fTA);
+
+  // FIX: ALL non-managers appear in manpower (Team Leader, Sr. Engineer, Inspector, Engineer)
+  let people=D.team.filter(m=>!m.r.includes("Manager"));
+  if(fName)people=people.filter(m=>m.n.toLowerCase().includes(fName)||m.e.toLowerCase().includes(fName));
+  if(fType)people=people.filter(m=>m.t===fType);
+
+  // Role filter
+  if(fRole==="unassigned"){
+    people=people.filter(m=>!tas.some(t=>getMPR(m.e,t.id)));
+  } else if(fRole==="id_warn"){
+    people=people.filter(m=>tas.some(t=>getMPR(m.e,t.id)&&!idOk(m.e,t.id)));
+  } else if(fRole&&fRole!==""){
+    people=people.filter(m=>tas.some(t=>getMPR(m.e,t.id)===fRole));
+  }
+
+  // Build overlap and ID warning lists
+  const allOvlp={};D.team.forEach(m=>{const ov=getOverlaps(m.e);if(ov.length)allOvlp[m.e]=ov;});
+  const ovlpInView=people.filter(m=>allOvlp[m.e]);
+  const idWarnInView=people.filter(m=>tas.some(t=>getMPR(m.e,t.id)&&!idOk(m.e,t.id)));
+
+  const owEl=document.getElementById("ovWarn");
+  if(ovlpInView.length){
+    owEl.style.display="block";
+    owEl.innerHTML="⚠ <strong>Schedule conflicts:</strong> "+ovlpInView.map(m=>{return m.n.split(" ")[0]+" ("+allOvlp[m.e].map(ov=>{const t1=D.tas.find(t=>t.id===ov.ta1),t2=D.tas.find(t=>t.id===ov.ta2);return(t1?t1.nm.slice(0,12):"?")+" ↔ "+(t2?t2.nm.slice(0,12):"?");}).join(", ")+")";}).join(" · ");
+  }else owEl.style.display="none";
+
+  const iwEl=document.getElementById("idWarn");
+  if(idWarnInView.length){
+    iwEl.style.display="block";
+    iwEl.innerHTML="🪪 <strong>ID not active — excluded from effective coverage:</strong> "+idWarnInView.map(m=>{
+      const missing=tas.filter(t=>getMPR(m.e,t.id)&&!idOk(m.e,t.id)).map(t=>t.nm.slice(0,12));
+      return m.n.split(" ")[0]+" ("+missing.join(", ")+")";
+    }).join(" · ");
+  }else iwEl.style.display="none";
+
+  // Build table
+  let th=`<thead><tr><th style="min-width:175px">Name</th>`;
+  tas.forEach(t=>{th+=`<th style="min-width:110px"><div style="text-align:center"><div style="font-size:10px;font-weight:700;color:${t.col}">${t.cl.split("/")[0].trim()}</div><div style="font-size:9px;font-weight:600">${t.nm.length>16?t.nm.slice(0,16)+"…":t.nm}</div><div style="font-family:var(--mono);font-size:9px;color:var(--tx2)">${dSh(t.st)}–${dSh(t.ed)}</div><div style="font-family:var(--mono);font-size:9px;color:var(--tx2)">Req: ${t.rd}D/${t.rn}N</div></div></th>`;});
+  th+=`<th style="min-width:140px">Next</th><th style="min-width:110px">Notes</th></tr></thead>`;
+
+  let tb="<tbody>";
+  people.forEach(m=>{
+    const hasOvlp=!!allOvlp[m.e];
+    tb+=`<tr${hasOvlp?' style="background:#fff8f8"':''}><td class="mpn"><div style="font-weight:500">${m.n.split(" ").slice(0,2).join(" ")}</div><div class="mpe">${m.e} · ${m.r.split("/")[0].trim()}</div></td>`;
+    tas.forEach(t=>{
+      const rv=getMPR(m.e,t.id);const cls=rcls(rv);
+      const ad=rv?asgD(m.e,t.id):null;
+      const isOvlp=hasOvlp&&rv&&allOvlp[m.e].some(ov=>ov.ta1===t.id||ov.ta2===t.id);
+      const hasActiveId=rv?idOk(m.e,t.id):true;
+      const idSt=rv?getIdStatus(m.e,t.id):"";
+      const cellBg=isOvlp?"background:#fee2e2":!hasActiveId&&rv?"background:#fff7ed":"";
+      let dateLabel="";
+      if(rv){
+        const custom=ad&&ad.custom;
+        dateLabel=`<span class="dt-btn${custom?" has-d":""}" onclick="openAsgD('${m.e}','${t.id}')">${custom?dSh(ad.start)+" – "+dSh(ad.end):"TA dates"}</span>`;
+      }
+      let idBadgeHtml="";
+      if(rv&&!hasActiveId){
+        const idLabel=idSt?idSt:"No ID";
+        idBadgeHtml=`<span class="${idSt==="PENDING"||idSt==="RENEWAL"?"id-warn-badge":"id-miss-badge"}">🪪 ${idLabel}</span>`;
+      }
+      let ovBadgeHtml=isOvlp?`<span class="ovlp-badge">⚠ Overlap</span>`:"";
+      tb+=`<td style="text-align:center;padding:3px;${cellBg}">
+        <select class="mpsel ${cls}" data-emp="${m.e}" data-ta="${t.id}" onchange="mpChg(this)">
+          <option value="">—</option>
+          <option value="Day"${rv==="Day"?" selected":""}>Day</option>
+          <option value="Night"${rv==="Night"?" selected":""}>Night</option>
+          <option value="Lead"${rv==="Lead"?" selected":""}>QC Lead</option>
+          <option value="Support"${rv==="Support"?" selected":""}>Support</option>
+        </select>${dateLabel}${idBadgeHtml}${ovBadgeHtml}</td>`;
+    });
+    tb+=`<td style="padding:3px"><input class="nti" placeholder="Next..." value="${(m.nx||"").replace(/"/g,"&quot;")}" data-emp="${m.e}" onchange="updNx(this)"></td>`;
+    tb+=`<td style="padding:3px"><input class="nti" placeholder="Notes..." value="${(m.nt||"").replace(/"/g,"&quot;")}" data-emp="${m.e}" onchange="updNt(this)"></td>`;
+    tb+="</tr>";
+  });
+
+  // ── THREE TALLY ROWS ──────────────────────────────────────
+  // Row 1: Day effective (ID-cleared)
+  tb+=`<tr class="tr-tally"><td>Day (ID-cleared / req)</td>`;
+  tas.forEach(t=>{
+    const dayAll=people.filter(m=>["Day","Lead"].includes(getMPR(m.e,t.id)));
+    const dayOk=dayAll.filter(m=>idOk(m.e,t.id)).length;
+    const dayTot=dayAll.length;
+    const idGap=dayTot-dayOk;
+    tb+=`<td><span class="t-day">${dayOk}</span>/<span class="t-req">${t.rd}</span>`;
+    if(idGap>0)tb+=`<br><span class="t-id-warn">+${idGap} 🪪 pending</span>`;
+    tb+=`</td>`;
+  });
+  tb+="<td></td><td></td></tr>";
+  // Row 2: Night effective
+  tb+=`<tr class="tr-tally"><td>Night (ID-cleared / req)</td>`;
+  tas.forEach(t=>{
+    const ngtAll=people.filter(m=>getMPR(m.e,t.id)==="Night");
+    const ngtOk=ngtAll.filter(m=>idOk(m.e,t.id)).length;
+    const ngtTot=ngtAll.length;
+    const idGap=ngtTot-ngtOk;
+    tb+=`<td><span class="t-ngt">${ngtOk}</span>/<span class="t-req">${t.rn}</span>`;
+    if(idGap>0)tb+=`<br><span class="t-id-warn">+${idGap} 🪪 pending</span>`;
+    tb+=`</td>`;
+  });
+  tb+="<td></td><td></td></tr>";
+  // Row 3: Total effective / gap
+  tb+=`<tr class="tr-tally"><td>Effective Total / Gap</td>`;
+  tas.forEach(t=>{
+    const effDay=people.filter(m=>["Day","Lead"].includes(getMPR(m.e,t.id))&&idOk(m.e,t.id)).length;
+    const effNgt=people.filter(m=>getMPR(m.e,t.id)==="Night"&&idOk(m.e,t.id)).length;
+    const eff=effDay+effNgt;
+    const tot=people.filter(m=>getMPR(m.e,t.id)).length;
+    const req=t.rd+t.rn;const gap=req-eff;
+    tb+=`<td><span style="font-family:var(--mono);font-size:12px;font-weight:700">${eff}/${req}</span><br><span class="${gap>0?"t-bad":"t-ok"}">${gap>0?"−"+gap:"✓"}</span>`;
+    if(tot>eff)tb+=`<br><span style="font-size:9px;color:var(--tx3)">${tot} assigned</span>`;
+    tb+=`</td>`;
+  });
+  tb+="<td></td><td></td></tr></tbody>";
+  document.getElementById("mpt").innerHTML=th+tb;
+  renMPS();
+}
+
+function mpChg(sel){
+  const e=sel.getAttribute("data-emp"),tid=sel.getAttribute("data-ta");
+  const cur=D.mp[mpK(e,tid)]||{};
+  D.mp[mpK(e,tid)]={role:sel.value,start:cur.start||"",end:cur.end||""};
+  sel.className="mpsel "+rcls(sel.value);save();renMP();
+}
+function updNx(inp){const e=inp.getAttribute("data-emp");const m=D.team.find(x=>x.e===e);if(m){m.nx=inp.value;save();}}
+function updNt(inp){const e=inp.getAttribute("data-emp");const m=D.team.find(x=>x.e===e);if(m){m.nt=inp.value;save();}}
+
+function renMPS(){
+  const people=D.team.filter(m=>!m.r.includes("Manager"));
+  let html="<div style='display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px'>";
+  D.tas.forEach(t=>{
+    const asgn=people.filter(m=>getMPR(m.e,t.id));
+    const effDay=asgn.filter(m=>["Day","Lead"].includes(getMPR(m.e,t.id))&&idOk(m.e,t.id)).length;
+    const effNgt=asgn.filter(m=>getMPR(m.e,t.id)==="Night"&&idOk(m.e,t.id)).length;
+    const totDay=asgn.filter(m=>["Day","Lead"].includes(getMPR(m.e,t.id))).length;
+    const totNgt=asgn.filter(m=>getMPR(m.e,t.id)==="Night").length;
+    const eff=effDay+effNgt;const req=t.rd+t.rn;const gap=req-eff;const ok=gap<=0;
+    const lead=asgn.filter(m=>getMPR(m.e,t.id)==="Lead");
+    html+=`<div style="background:${ok?"var(--greenb)":"var(--redb)"};border:1px solid ${ok?"var(--greenm)":"var(--redm)"};border-radius:var(--r);padding:10px 12px;border-left:3px solid ${t.col}">
+      <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--tx2)">${t.cl.split("/")[0].trim()}</div>
+      <div style="font-weight:600;margin-bottom:5px">${t.nm.length>22?t.nm.slice(0,22)+"…":t.nm}</div>
+      <div style="display:flex;gap:12px;font-family:var(--mono);font-size:11px;margin-bottom:3px">
+        <span>Day: <b style="color:var(--blue)">${effDay}${totDay>effDay?"("+totDay+")":""}</b>/${t.rd}</span>
+        <span>Night: <b style="color:var(--pur)">${effNgt}${totNgt>effNgt?"("+totNgt+")":""}</b>/${t.rn}</span>
+      </div>
+      ${lead.length?`<div style="font-size:10px;margin-bottom:3px">Lead: <b>${lead.map(m=>m.n.split(" ")[0]).join(", ")}</b></div>`:`<div style="font-size:10px;color:var(--red);margin-bottom:3px">⚠ No QC Lead assigned</div>`}
+      <div style="font-family:var(--mono);font-size:11px;font-weight:700;color:${ok?"var(--green)":"var(--red)"}">${ok?"✓ Covered":"⚠ Effective short "+gap}</div>
+      ${asgn.length?`<div style="margin-top:4px;font-size:10px;color:var(--tx2)">${asgn.map(m=>{const ok2=idOk(m.e,t.id);return`<span style="${ok2?"":"color:var(--orn);font-style:italic"}">${m.n.split(" ")[0]}${ok2?"":"🪪"}</span>`;}).join(", ")}</div>`:`<div style='font-size:10px;color:var(--tx3);margin-top:4px'>No one assigned</div>`}
+    </div>`;
+  });
+  document.getElementById("mps").innerHTML=html+"</div>";
+}
+
+// ═══════════════════════════════════════════════════════════
+// ── Gantt range helpers ─────────────────────────────────────────
+function onRngChg(){
+  const v=document.getElementById("gr").value;
+  const showCust=v==="custom";
+  ["gsDate","gsDateSep","geDate"].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display=showCust?(id==="gsDateSep"?"inline":"inline-block"):"none";});
+  if(showCust){
+    const gsd=document.getElementById("gsDate");const ged=document.getElementById("geDate");
+    if(!gsd.value){gsd.value=TODAY.toISOString().slice(0,10);}
+    if(!ged.value){const ne=new Date(TODAY);ne.setMonth(ne.getMonth()+6);ged.value=ne.toISOString().slice(0,10);}
+  }
+  renGT();
+}
+function gtRange(){
+  const v=document.getElementById("gr").value;
+  let GS,GE;
+  if(v==="custom"){
+    const sv=document.getElementById("gsDate").value;
+    const ev=document.getElementById("geDate").value;
+    GS=sv?new Date(sv):new Date(TODAY);
+    GE=ev?new Date(ev):new Date(TODAY.getTime()+86400000*180);
+  } else {
+    GS=new Date(TODAY.getFullYear(),TODAY.getMonth()-1,1);
+    const months=v==="3m"?4:v==="6m"?7:13;
+    GE=new Date(GS.getFullYear(),GS.getMonth()+months,0);
+  }
+  return{GS,GE};
+}
+function clrGTFilters(){
+  ["gtFName","gtFTA","gtFRole","gtFType"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
+  renGT();
+}
+
+function renGT(){
+  // Populate TA filter dropdown dynamically
+  const taEl=document.getElementById("gtFTA");
+  if(taEl){
+    const cur=taEl.value;
+    taEl.innerHTML="<option value=''>All TAs</option>"+D.tas.map(t=>`<option value="${t.id}">${t.nm}</option>`).join("");
+    if(cur)taEl.value=cur;
+  }
+
+  const {GS,GE}=gtRange();
+  const tot=(GE-GS)/86400000;
+  const pc=d=>Math.max(0,Math.min(100,((d-GS)/86400000/tot*100)));
+
+  const gf=(document.getElementById("gf")||{}).value||"all";
+  const gtFName=((document.getElementById("gtFName")||{}).value||"").toLowerCase();
+  const gtFTA=(document.getElementById("gtFTA")||{}).value||"";
+  const gtFRole=(document.getElementById("gtFRole")||{}).value||"";
+  const gtFType=(document.getElementById("gtFType")||{}).value||"";
+
+  let team=D.team.slice();
+  if(gf==="ins")team=team.filter(m=>m.r.includes("Inspector")||m.r.includes("Engineer"));
+  if(gf==="ld") team=team.filter(m=>m.r.includes("Team Leader")||m.r.includes("Sr. Engineer")||m.r.includes("Manager"));
+  if(gtFName)team=team.filter(m=>m.n.toLowerCase().includes(gtFName)||m.e.toLowerCase().includes(gtFName));
+  if(gtFType)team=team.filter(m=>m.t===gtFType);
+  if(gtFTA)team=team.filter(m=>getMPR(m.e,gtFTA));
+  if(gtFRole==="assigned")team=team.filter(m=>D.tas.some(t=>getMPR(m.e,t.id)));
+  else if(gtFRole==="free")team=team.filter(m=>!D.tas.some(t=>getMPR(m.e,t.id)));
+  else if(gtFRole==="overlap")team=team.filter(m=>getOverlaps(m.e).length>0);
+  else if(gtFRole==="id_warn")team=team.filter(m=>D.tas.some(t=>getMPR(m.e,t.id)&&!idOk(m.e,t.id)));
+  else if(gtFRole&&gtFRole!=="")team=team.filter(m=>D.tas.some(t=>getMPR(m.e,t.id)===gtFRole));
+
+  const cntEl=document.getElementById("gtFCount");
+  if(cntEl)cntEl.textContent=team.length+" shown";
+
+  document.getElementById("gleg").innerHTML=`
+    <div class="gli"><div class="gls" style="background:var(--greenb);border:1px solid var(--greenm)"></div>Available</div>
+    <div class="gli"><div class="gls" style="background:var(--bg3);border:1px solid var(--bd)"></div>Office/Yard</div>
+    <div class="gli"><div class="gls" style="background:#fee2e2;border:1px solid #ef4444"></div>Overlap</div>
+    <div class="gli"><div class="gls" style="background:var(--ornb);border:2px dashed var(--orn)"></div>ID not active</div>
+    ${D.tas.map(t=>`<div class="gli"><div class="gls" style="background:${t.col};opacity:.75"></div>${t.cl.split("/")[0].trim()}</div>`).join("")}`;
+
+  const LW=195;
+  const tp=pc(TODAY);
+  const tdInRange=TODAY>=GS&&TODAY<=GE;
+
+  // Dynamic date ruler — works for any date range
+  let rulerHtml="";
+  let mCur=new Date(GS.getFullYear(),GS.getMonth(),1);
+  while(mCur<=GE){
+    if(mCur>=new Date(GS.getFullYear(),GS.getMonth(),1)){
+      const l=pc(mCur);
+      const lbl=mCur.toLocaleDateString("en-GB",{month:"short",year:"2-digit"});
+      rulerHtml+=`<div class="rtick mo" style="left:${l}%">${lbl}</div>`;
+    }
+    mCur=new Date(mCur.getFullYear(),mCur.getMonth()+1,1);
+  }
+  // Week ticks — density adapts to range length
+  const weekStep=tot>180?14:7; // bi-weekly for long ranges
+  let wd=new Date(GS.getTime());
+  while(wd<=GE){
+    const isToday=wd.toDateString()===TODAY.toDateString();
+    const l=pc(wd);
+    const lbl=isToday?"TODAY":wd.getDate().toString();
+    if(l>1&&l<99)rulerHtml+=`<div class="rtick${isToday?" td":""}" style="left:${l}%">${lbl}</div>`;
+    wd=new Date(wd.getTime()+86400000*weekStep);
+  }
+
+  let html=`<div style="display:grid;grid-template-columns:${LW}px 1fr">
+    <div style="background:var(--bg3);padding:6px 11px;font-size:10px;font-weight:600;color:var(--tx2);border-right:1px solid var(--bd);border-bottom:2px solid var(--bd)">INSPECTOR</div>
+    <div class="ruler">${rulerHtml}${tdInRange?`<div class="gtd" style="left:${tp}%"><span class="gtdl">TODAY</span></div>`:""}</div>
+  </div>`;
+
+  team.forEach(m=>{
+    const asgns=D.tas.map(t=>({t,role:getMPR(m.e,t.id)})).filter(x=>x.role);
+    const absConded=m.s&&m.s.includes("ABSCONDED");
+    const overlaps=getOverlaps(m.e);
+    let bars="";
+
+    if(absConded){
+      bars+=`<div class="gbar g-abs" style="left:0%;width:100%">Absconded</div>`;
+    } else if(asgns.length===0){
+      const u=(m.s||"").toUpperCase();
+      if(u==="LEAVE")bars+=`<div class="gbar g-lv" style="left:0%;width:100%">Leave</div>`;
+      else bars+=`<div class="gbar g-off" style="left:0%;width:100%">${u.includes("YARD")?"Yard":"Office"}</div>`;
+    } else {
+      asgns.forEach(({t,role})=>{
+        const ad=asgD(m.e,t.id);if(!ad)return;
+        const s=new Date(ad.start),e=new Date(ad.end);
+        if(e<GS||s>GE)return;
+        const l=pc(s),w=Math.max(0.5,pc(e)-l);
+        const isOvlp=overlaps.some(ov=>ov.ta1===t.id||ov.ta2===t.id);
+        const idGood=idOk(m.e,t.id);
+        const lbl=role==="Lead"?"*"+t.cl.split("/")[0].trim().slice(0,5):t.cl.split("/")[0].trim().slice(0,7);
+        let cls2=isOvlp?"g-ovlp":(!idGood?"g-id-warn":"");
+        let sty2=(!isOvlp)?"background:"+t.col+";color:#fff;border-color:rgba(0,0,0,.12)":"";
+        bars+=`<div class="gbar${cls2?" "+cls2:""}" style="left:${l}%;width:${w}%;${sty2}" onclick="openAsgD('${m.e}','${t.id}')" title="${m.n} - ${t.nm} (${role})">${lbl}${isOvlp?" !":""}${!idGood&&!isOvlp?" ID?":""}</div>`;
+      });
+      // Available gaps
+      const sorted=asgns.filter(({t})=>{const ad=asgD(m.e,t.id);return ad&&new Date(ad.end)>=GS&&new Date(ad.start)<=GE;}).sort((a,b)=>new Date(asgD(m.e,a.t.id).start)-new Date(asgD(m.e,b.t.id).start));
+      let prevEnd=new Date(GS);
+      sorted.forEach(({t})=>{
+        const ad=asgD(m.e,t.id);if(!ad)return;
+        const s=new Date(ad.start),e=new Date(ad.end);
+        if((s-prevEnd)/86400000>2){const gl=pc(prevEnd),gw=pc(s)-gl;if(gw>0.5)bars+=`<div class="gbar g-avail" style="left:${gl}%;width:${gw}%" title="Available">Avail</div>`;}
+        if(e>prevEnd)prevEnd=e;
+      });
+    }
+
+    html+=`<div class="grow" style="grid-template-columns:${LW}px 1fr">
+      <div class="gname" style="height:32px"><div class="gn" title="${m.n}">${m.n.split(" ").slice(0,2).join(" ")}</div><div class="ge">${m.e}</div></div>
+      <div class="garea">${tdInRange?`<div class="gtd" style="left:${tp}%"></div>`:""}${bars}</div>
+    </div>`;
+  });
+  document.getElementById("gc").innerHTML=html;
+}
+// ═══════════════════════════════════════════════════════════
+// TEAM TABLE
+// ═══════════════════════════════════════════════════════════
+function clrTMF(){["ts","tf","tt","tRole","tTA"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});renTM();}
+
+function renTM(){
+  // Populate site dropdown dynamically
+  const taEl=document.getElementById("tTA");
+  if(taEl){
+    const cur=taEl.value;
+    const sites=[...new Set(D.team.map(m=>m.s).filter(Boolean))].sort();
+    taEl.innerHTML="<option value=''>All Sites</option>"+sites.map(s=>`<option value="${s}">${s}</option>`).join("");
+    if(cur)taEl.value=cur;
+  }
+  const q=(document.getElementById("ts").value||"").toLowerCase();
+  const sf=document.getElementById("tf").value;
+  const tf2=document.getElementById("tt").value;
+  const tRole=(document.getElementById("tRole")||{}).value||"";
+  const tTA=(document.getElementById("tTA")||{}).value||"";
+  let t=D.team.slice();
+  if(q)t=t.filter(m=>m.n.toLowerCase().includes(q)||m.e.toLowerCase().includes(q));
+  if(sf)t=t.filter(m=>{const u=(m.s||"").toUpperCase();if(sf==="site")return u.includes("T/A")||u.includes("SUPPLY");if(sf==="yard")return u.includes("YARD");if(sf==="office")return u.includes("OFFICE");if(sf==="mob")return u==="MOBILIZING";if(sf==="lv")return u==="LEAVE";if(sf==="abs")return u.includes("ABSCONDED");return true;});
+  if(tf2)t=t.filter(m=>m.t===tf2);
+  if(tRole)t=t.filter(m=>m.r.includes(tRole));
+  if(tTA)t=t.filter(m=>m.s===tTA);
+  const total=D.team.length;const shown=t.length;
+  document.getElementById("tc").textContent=`${total} members`;
+  const cnt=document.getElementById("tmCount");
+  if(cnt)cnt.textContent=shown<total?`${shown} of ${total} shown`:`${total} members`;
+  document.getElementById("tb").innerHTML=t.map(m=>`<tr>
+    <td style="font-family:var(--mono);font-size:10px;color:var(--tx2)">${m.e}</td>
+    <td style="font-weight:500">${m.n}</td>
+    <td style="font-size:11px;color:var(--tx2)">${m.r}</td>
+    <td>${tBdg(m.t)}</td>
+    <td>${sTag(m.s)}</td>
+    <td>${sBadge(m.s)}</td>
+    <td style="font-size:11px;color:var(--tx2)">${m.nx||"—"}</td>
+    <td style="font-size:10px;color:var(--tx3)">${m.nt||""}</td>
+    <td><button class="btn bg bxs" onclick="openMem('${m.e}')">✏</button></td>
+  </tr>`).join("");
+}
+
+function clrQLF(){["qlFName","qlFType","qlFStat","qlFCert"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});renQL();}
+
+function renQL(){
+  const fName=(document.getElementById("qlFName")||{}).value||"";
+  const fType=(document.getElementById("qlFType")||{}).value||"";
+  const fStat=(document.getElementById("qlFStat")||{}).value||"";
+  const fCert=(document.getElementById("qlFCert")||{}).value||"";
+
+  let team=D.team.filter(m=>!m.r.includes("Manager"));
+  if(fName)team=team.filter(m=>m.n.toLowerCase().includes(fName.toLowerCase())||m.e.toLowerCase().includes(fName.toLowerCase()));
+  if(fType)team=team.filter(m=>m.t===fType);
+
+  // Cert filter — show only people who have that cert field populated
+  if(fCert){
+    const keyMap={cswip:"cs",asnt:"as",api:"ap",h2s:"h2"};
+    const k=keyMap[fCert];
+    team=team.filter(m=>{const q=D.quals[m.e]||{};return q[k];});
+  }
+
+  // Status filter
+  if(fStat){
+    team=team.filter(m=>{
+      const q=D.quals[m.e]||{};
+      const dates=[q.cs,q.as,q.ap,q.h2].filter(Boolean);
+      if(fStat==="missing") return dates.length===0;
+      if(fStat==="expired") return dates.some(v=>dU(v)<0);
+      if(fStat==="expiring") return !dates.some(v=>dU(v)<0) && dates.some(v=>dU(v)>=0&&dU(v)<30);
+      if(fStat==="valid")  return dates.length>0 && dates.every(v=>dU(v)>=30);
+      return true;
+    });
+  }
+
+  const cntEl=document.getElementById("qlCount");
+  if(cntEl)cntEl.textContent=team.length<D.team.length?`${team.length} of ${D.team.length-1} shown`:"";
+
+  document.getElementById("qb").innerHTML=team.map(m=>{
+    const q=D.quals[m.e]||{};
+    const cs=cSt(q.cs),as=cSt(q.as),ap=cSt(q.ap),hs=cSt(q.h2);
+    const hasIssue=[q.cs,q.as,q.h2].some(v=>v&&dU(v)<30)||[q.cs,q.as,q.h2].some(v=>v&&dU(v)<0);
+    const allBlank=!q.cs&&!q.as&&!q.ap&&!q.h2;
+    const statusHtml=allBlank
+      ?`<span style="color:var(--tx3);font-size:10px">No dates on file</span>`
+      :hasIssue
+        ?`<span style="color:var(--yel);font-size:10px;font-weight:600">⚠ Action needed</span>`
+        :`<span style="color:var(--green);font-size:10px;font-weight:600">✓ OK</span>`;
+    return`<tr>
+      <td><div style="font-weight:500">${m.n.split(" ").slice(0,2).join(" ")}</div><div style="font-size:9px;color:var(--tx3);font-family:var(--mono)">${m.e} · ${tBdg(m.t)}</div></td>
+      <td style="font-size:10px;color:var(--${cs.c})">${q.cs?dSh(q.cs):"—"}<br><span style="font-size:9px">${q.cs?cs.l:""}</span></td>
+      <td style="font-size:10px;color:var(--${as.c})">${q.as?dSh(q.as):"—"}<br><span style="font-size:9px">${q.as?as.l:""}</span></td>
+      <td style="font-size:10px;color:var(--${ap.c})">${q.ap?dSh(q.ap):"—"}<br><span style="font-size:9px">${q.ap?ap.l:""}</span></td>
+      <td style="font-size:10px;color:var(--${hs.c})">${q.h2?dSh(q.h2):"—"}<br><span style="font-size:9px">${q.h2?hs.l:""}</span></td>
+      <td style="font-size:10px;color:var(--tx2)">${q.ot||"—"}</td>
+      <td>${statusHtml}</td>
+      <td><button class="btn bg bxs" onclick="openQl('${m.e}')">✏</button></td>
+    </tr>`;
+  }).join("");
+}
+
+function clrIDF(){["idFName","idFType","idFSite","idFStat"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});renID();}
+
+function renID(){
+  const fName=(document.getElementById("idFName")||{}).value||"";
+  const fType=(document.getElementById("idFType")||{}).value||"";
+  const fSite=(document.getElementById("idFSite")||{}).value||"";
+  const fStat=(document.getElementById("idFStat")||{}).value||"";
+
+  let team=D.team.filter(m=>!m.r.includes("Manager"));
+  if(fName)team=team.filter(m=>m.n.toLowerCase().includes(fName.toLowerCase())||m.e.toLowerCase().includes(fName.toLowerCase()));
+  if(fType)team=team.filter(m=>m.t===fType);
+
+  // Site + status filter
+  if(fSite&&fStat){
+    team=team.filter(m=>{
+      const ids=D.ids[m.e]||{};const v=ids[fSite]||"";
+      if(fStat==="none")    return !v;
+      if(fStat==="issue")   return v&&v!=="ACTIVE"&&v!=="NA";
+      return v===fStat;
+    });
+  } else if(fSite){
+    // Show only people with any ID status for this site
+    team=team.filter(m=>{const ids=D.ids[m.e]||{};return ids[fSite]!==undefined;});
+  } else if(fStat){
+    // Show people who have that status on ANY site
+    const sites=["ibz","arr","mad","utd","sip","sab"];
+    team=team.filter(m=>{
+      const ids=D.ids[m.e]||{};
+      if(fStat==="none")  return sites.every(s=>!ids[s]);
+      if(fStat==="issue") return sites.some(s=>ids[s]&&ids[s]!=="ACTIVE"&&ids[s]!=="NA");
+      return sites.some(s=>ids[s]===fStat);
+    });
+  }
+
+  const cntEl=document.getElementById("idCount");
+  if(cntEl)cntEl.textContent=team.length<D.team.length?`${team.length} of ${D.team.length-1} shown`:"";
+
+  // Highlight filtered site column
+  const siteCols=["ibz","arr","mad","utd","sip","sab"];
+  document.getElementById("ib").innerHTML=team.map(m=>{
+    const ids=D.ids[m.e]||{};
+    const cells=siteCols.map(k=>{
+      const v=ids[k]||"";
+      const highlight=fSite===k?"background:var(--blueb);":"";
+      const issue=v&&v!=="ACTIVE"&&v!=="NA";
+      const rowBg=issue?"background:#fff7ed;":"";
+      return`<td style="${highlight}${rowBg}">${idBdg(v)}</td>`;
+    }).join("");
+    // Flag row if any ID has an issue
+    const anyIssue=siteCols.some(k=>{const v=ids[k]||"";return v&&v!=="ACTIVE"&&v!=="NA";});
+    return`<tr${anyIssue?' style="background:#fffbf5"':""}>
+      <td><div style="font-weight:500">${m.n.split(" ").slice(0,2).join(" ")}</div><div style="font-size:9px;font-family:var(--mono);color:var(--tx3)">${m.e} · ${tBdg(m.t)}</div></td>
+      ${cells}
+      <td><button class="btn bg bxs" onclick="openId('${m.e}')">✏</button></td>
+    </tr>`;
+  }).join("");
+}
+
+// ═══════════════════════════════════════════════════════════
+// MODAL — TA
+// ═══════════════════════════════════════════════════════════
+const COLS=["#1d4ed8","#15803d","#a16207","#6d28d9","#c2410c","#0e7490","#b91c1c","#64748b","#0f766e","#9333ea"];
+function openTA(id){
+  const t=id?D.tas.find(x=>x.id===id):null;
+  document.getElementById("tamt").textContent=t?"Edit TA":"Add New TA";
+  document.getElementById("taId").value=t?t.id:"";
+  document.getElementById("taCl").value=t?t.cl:"";
+  document.getElementById("taNm").value=t?t.nm:"";
+  document.getElementById("taSt").value=t?t.st:"";
+  document.getElementById("taEd").value=t?t.ed:"";
+  document.getElementById("taLd").value=t?t.ld:"";
+  document.getElementById("taSk").value=t?t.sk:"";
+  document.getElementById("taRd").value=t?t.rd:0;
+  document.getElementById("taRn").value=t?t.rn:0;
+  document.getElementById("taNt").value=t?t.nt:"";
+  document.getElementById("taCol").value=t?t.col:"#1d4ed8";
+  document.getElementById("taDb").style.display=t?"inline-flex":"none";
+  const sc=t?t.col:"#1d4ed8";
+  document.getElementById("cp").innerHTML=COLS.map(c=>`<div class="csw${c===sc?" sel":""}" style="background:${c}" onclick="pickC('${c}',this)"></div>`).join("");
+  document.getElementById("taOv").classList.add("open");
+}
+function pickC(c,el){document.getElementById("taCol").value=c;document.querySelectorAll(".csw").forEach(s=>s.classList.remove("sel"));el.classList.add("sel");}
+function saveTA(){
+  const id=document.getElementById("taId").value||"TA_"+Date.now();
+  const obj={id,cl:document.getElementById("taCl").value.trim(),nm:document.getElementById("taNm").value.trim(),st:document.getElementById("taSt").value,ed:document.getElementById("taEd").value,ld:document.getElementById("taLd").value.trim(),sk:document.getElementById("taSk").value.trim(),rd:parseInt(document.getElementById("taRd").value)||0,rn:parseInt(document.getElementById("taRn").value)||0,col:document.getElementById("taCol").value,nt:document.getElementById("taNt").value.trim()};
+  const idx=D.tas.findIndex(t=>t.id===id);
+  if(idx>=0)D.tas[idx]=obj;else D.tas.push(obj);
+  save();closeAll();renAct();
+}
+function delTA(){const id=document.getElementById("taId").value;if(!id||!confirm("Delete this TA?"))return;D.tas=D.tas.filter(t=>t.id!==id);Object.keys(D.mp).forEach(k=>{if(k.endsWith("__"+id))delete D.mp[k];});save();closeAll();renAct();}
+
+// ═══════════════════════════════════════════════════════════
+// MODAL — MEMBER
+// ═══════════════════════════════════════════════════════════
+function openMem(emp){
+  const m=emp?D.team.find(x=>x.e===emp):null;
+  document.getElementById("mmt").textContent=m?m.n.split(" ").slice(0,2).join(" "):"Add Team Member";
+  document.getElementById("mOrig").value=m?m.e:"";
+  document.getElementById("mEmp").value=m?m.e:"";
+  document.getElementById("mNm").value=m?m.n:"";
+  document.getElementById("mRol").value=m?m.r:"QC Inspector";
+  document.getElementById("mTyp").value=m?m.t:"TEMP";
+  document.getElementById("mSit").value=m?(m.s||"YARD/IED"):"YARD/IED";
+  document.getElementById("mNxt").value=m?(m.nx||""):"";
+  document.getElementById("mNts").value=m?(m.nt||""):"";
+  document.getElementById("mDb").style.display=m?"inline-flex":"none";
+  document.getElementById("memOv").classList.add("open");
+}
+function saveMem(){
+  const orig=document.getElementById("mOrig").value;
+  const obj={e:document.getElementById("mEmp").value.trim(),n:document.getElementById("mNm").value.trim(),r:document.getElementById("mRol").value,t:document.getElementById("mTyp").value,s:document.getElementById("mSit").value,nx:document.getElementById("mNxt").value.trim(),nt:document.getElementById("mNts").value.trim()};
+  if(orig){const idx=D.team.findIndex(m=>m.e===orig);if(idx>=0)D.team[idx]=obj;else D.team.push(obj);}else D.team.push(obj);
+  save();closeAll();renAct();
+}
+function delMem(){const orig=document.getElementById("mOrig").value;if(!orig||!confirm("Remove this member?"))return;D.team=D.team.filter(m=>m.e!==orig);save();closeAll();renAct();}
+
+// ═══════════════════════════════════════════════════════════
+// MODAL — ASSIGNMENT DATES
+// ═══════════════════════════════════════════════════════════
+function openAsgD(emp,taId){
+  const m=D.team.find(x=>x.e===emp);const ta=D.tas.find(x=>x.id===taId);
+  const a=getMPA(emp,taId)||{role:"",start:"",end:""};
+  document.getElementById("asgTt").textContent="Assignment Dates";
+  document.getElementById("asgE").value=emp;document.getElementById("asgT").value=taId;
+  document.getElementById("asgInfo").innerHTML=`<strong>${m?m.n.split(" ").slice(0,2).join(" "):"?"}</strong> → <strong style="color:${ta?ta.col:"#000"}">${ta?ta.nm:"?"}</strong><br><span style="font-family:var(--mono);font-size:10px;color:var(--tx2)">Role: ${a.role||"—"} · TA dates: ${ta?dSh(ta.st)+" – "+dSh(ta.ed):"?"}</span>`;
+  document.getElementById("asgSt").value=a.start||"";
+  document.getElementById("asgEd").value=a.end||"";
+  document.getElementById("asgOv").classList.add("open");
+}
+function saveAsgD(){
+  const e=document.getElementById("asgE").value,tid=document.getElementById("asgT").value;
+  const cur=D.mp[mpK(e,tid)]||{role:""};
+  D.mp[mpK(e,tid)]={role:cur.role||"",start:document.getElementById("asgSt").value,end:document.getElementById("asgEd").value};
+  save();closeAll();renMP();if(document.getElementById("p-gt").classList.contains("active"))renGT();
+}
+function clrAsgD(){
+  const e=document.getElementById("asgE").value,tid=document.getElementById("asgT").value;
+  const cur=D.mp[mpK(e,tid)]||{role:""};
+  D.mp[mpK(e,tid)]={role:cur.role||"",start:"",end:""};
+  save();closeAll();renMP();if(document.getElementById("p-gt").classList.contains("active"))renGT();
+}
+
+// ═══════════════════════════════════════════════════════════
+// MODAL — QUALS / IDs
+// ═══════════════════════════════════════════════════════════
+function openQl(emp){
+  const m=D.team.find(x=>x.e===emp);const q=D.quals[emp]||{};
+  document.getElementById("qlmt").textContent=(m?m.n.split(" ").slice(0,2).join(" "):"")+" — Qualifications";
+  document.getElementById("qEmp").value=emp;
+  document.getElementById("qCs").value=q.cs||"";document.getElementById("qAs").value=q.as||"";
+  document.getElementById("qAp").value=q.ap||"";document.getElementById("qH2").value=q.h2||"";
+  document.getElementById("qOt").value=q.ot||"";
+  document.getElementById("qlOv").classList.add("open");
+}
+function saveQl(){
+  const e=document.getElementById("qEmp").value;
+  D.quals[e]={cs:document.getElementById("qCs").value,as:document.getElementById("qAs").value,ap:document.getElementById("qAp").value,h2:document.getElementById("qH2").value,ot:document.getElementById("qOt").value};
+  save();closeAll();renQL();
+}
+function openId(emp){
+  const m=D.team.find(x=>x.e===emp);const ids=D.ids[emp]||{};
+  document.getElementById("idmt").textContent=(m?m.n.split(" ").slice(0,2).join(" "):"")+" — Site IDs";
+  document.getElementById("idEmp").value=emp;
+  ["idIbz","idArr","idMad","idUtd","idSip","idSab"].forEach((id,i)=>{document.getElementById(id).value=ids[["ibz","arr","mad","utd","sip","sab"][i]]||"";});
+  document.getElementById("idOv").classList.add("open");
+}
+function saveId(){
+  const e=document.getElementById("idEmp").value;
+  D.ids[e]={ibz:document.getElementById("idIbz").value,arr:document.getElementById("idArr").value,mad:document.getElementById("idMad").value,utd:document.getElementById("idUtd").value,sip:document.getElementById("idSip").value,sab:document.getElementById("idSab").value};
+  save();closeAll();renID();renMP();
+}
+function closeAll(){document.querySelectorAll(".ov").forEach(o=>o.classList.remove("open"));}
+document.querySelectorAll(".ov").forEach(o=>{o.addEventListener("click",e=>{if(e.target===o)closeAll();});});
+
+// ═══════════════════════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════
+// MONTHLY SUMMARY — audit-ready printable document
+// ═══════════════════════════════════════════════════════════
+function genSummary(){
+  const now=new Date();
+  const mo=now.toLocaleDateString("en-GB",{month:"long",year:"numeric"});
+  const dt=now.toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"});
+  const people=D.team.filter(m=>!m.r.includes("Manager"));
+
+  // Build TA rows
+  let taRows="";
+  D.tas.forEach(t=>{
+    const asgn=people.filter(m=>getMPR(m.e,t.id));
+    const effDay=asgn.filter(m=>["Day","Lead"].includes(getMPR(m.e,t.id))&&idOk(m.e,t.id)).length;
+    const effNgt=asgn.filter(m=>getMPR(m.e,t.id)==="Night"&&idOk(m.e,t.id)).length;
+    const eff=effDay+effNgt;const req=t.rd+t.rn;const gap=req-eff;
+    const lead=asgn.filter(m=>getMPR(m.e,t.id)==="Lead").map(m=>m.n.split(" ").slice(0,2).join(" ")).join(", ")||"Not assigned";
+    const idIssues=asgn.filter(m=>!idOk(m.e,t.id)).map(m=>m.n.split(" ")[0]).join(", ");
+    const dSh2=s=>s?new Date(s).toLocaleDateString("en-GB",{day:"2-digit",month:"short"}):"—";
+    taRows+=`<tr>
+      <td><span style="display:inline-block;width:10px;height:10px;background:${t.col};border-radius:2px;margin-right:6px"></span><strong>${t.nm}</strong><br><small style="color:#666">${t.cl}</small></td>
+      <td style="font-family:monospace;font-size:11px">${dSh2(t.st)} – ${dSh2(t.ed)}</td>
+      <td>${lead}</td>
+      <td style="text-align:center;font-family:monospace">${t.rd}D / ${t.rn}N</td>
+      <td style="text-align:center;font-family:monospace"><b style="color:${effDay>=t.rd?"green":"red"}">${effDay}</b>/${t.rd} &nbsp; <b style="color:${effNgt>=t.rn?"green":"red"}">${effNgt}</b>/${t.rn}</td>
+      <td style="text-align:center;font-family:monospace;font-weight:700;color:${gap<=0?"green":"red"}">${gap<=0?"OK":"Short "+gap}</td>
+      <td style="font-size:11px;color:${idIssues?"#b45309":"#666"}">${idIssues||"—"}</td>
+    </tr>`;
+  });
+
+  // Overlap warnings
+  const ovlpList=D.team.map(m=>({m,ov:getOverlaps(m.e)})).filter(x=>x.ov.length>0);
+  let ovlpHtml=ovlpList.length===0?`<p style="color:green">&#10003; No schedule conflicts detected.</p>`:
+    ovlpList.map(({m,ov})=>`<div style="margin-bottom:4px"><strong>${m.n.split(" ").slice(0,2).join(" ")}</strong>: `+ov.map(o=>{const t1=D.tas.find(t=>t.id===o.ta1),t2=D.tas.find(t=>t.id===o.ta2);return`<span style="color:#b91c1c">${t1?t1.nm:"?"} &#8596; ${t2?t2.nm:"?"}</span>`;}).join(", ")+"</div>").join("");
+
+  // ID warnings
+  const idWarnList=D.team.flatMap(m=>D.tas.filter(t=>getMPR(m.e,t.id)&&!idOk(m.e,t.id)).map(t=>({m,t,st:getIdStatus(m.e,t.id)})));
+  let idHtml=idWarnList.length===0?`<p style="color:green">&#10003; All assigned inspectors have active IDs for their assigned sites.</p>`:
+    idWarnList.map(({m,t,st})=>`<div style="margin-bottom:4px"><strong>${m.n.split(" ").slice(0,2).join(" ")}</strong> assigned to <strong>${t.nm}</strong> — ID status: <span style="color:#b45309">${st||"Not on file"}</span></div>`).join("");
+
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8">
+<title>TA Schedule Master — ${mo}</title>
+<style>
+  body{font-family:Arial,sans-serif;font-size:12px;color:#1c1917;margin:30px;line-height:1.5}
+  .hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding-bottom:14px;border-bottom:2px solid #1d4ed8}
+  .hdr-title{font-size:18px;font-weight:700;color:#1d4ed8}
+  .hdr-sub{font-size:11px;color:#6b6460;margin-top:2px}
+  .hdr-ref{font-size:10px;color:#6b6460;text-align:right;line-height:1.8}
+  h2{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#6b6460;margin:18px 0 8px;padding-bottom:4px;border-bottom:1px solid #ddd}
+  table{width:100%;border-collapse:collapse;margin-bottom:14px}
+  th{background:#1d4ed8;color:#fff;padding:7px 9px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+  td{padding:7px 9px;border-bottom:1px solid #e8e4dc;vertical-align:top}
+  tr:nth-child(even) td{background:#f7f5f0}
+  .warn-box{background:#fff7ed;border:1px solid #fed7aa;border-radius:4px;padding:10px 14px;margin-bottom:10px}
+  .ok-box{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:4px;padding:10px 14px;margin-bottom:10px}
+  .footer{margin-top:30px;padding-top:10px;border-top:1px solid #ddd;font-size:10px;color:#a09890;display:flex;justify-content:space-between}
+  @media print{body{margin:15mm}.no-print{display:none}}
+</style>
+</head><body>
+<div class="hdr">
+  <div>
+    <div class="hdr-title">Plant-Tech Arabia Co. Ltd.</div>
+    <div style="font-size:15px;font-weight:600;margin-top:4px">TA Schedule Master — ${mo}</div>
+    <div class="hdr-sub">Inspection &amp; Engineering Department &nbsp;·&nbsp; Al-Jubail, Saudi Arabia</div>
+  </div>
+  <div class="hdr-ref">
+    Doc Ref: PT-QSP-QC-04 Cl.6.10.5<br>
+    Prepared by: IED Manager<br>
+    Date: ${dt}<br>
+    Total Team: ${D.team.length} &nbsp;·&nbsp; Active TAs: ${D.tas.filter(t=>new Date(t.ed)>=TODAY).length}
+  </div>
+</div>
+
+<h2>1. TA Schedule &amp; Coverage Status</h2>
+<table>
+  <thead><tr>
+    <th>TA / Project</th><th>Period</th><th>QC Lead</th>
+    <th>Required</th><th>Effective (D/N)</th><th>Status</th><th>ID Pending</th>
+  </tr></thead>
+  <tbody>${taRows}</tbody>
+</table>
+
+<h2>2. Schedule Overlap Review</h2>
+<div class="${ovlpList.length?"warn-box":"ok-box"}">${ovlpHtml}</div>
+
+<h2>3. Site ID Status — Active Assignments</h2>
+<div class="${idWarnList.length?"warn-box":"ok-box"}">${idHtml}</div>
+
+<h2>4. Inspector Deployment Summary</h2>
+<table>
+  <thead><tr><th>Name</th><th>Emp No</th><th>Type</th><th>Current Site</th><th>Assigned TA(s)</th><th>Next Assignment</th></tr></thead>
+  <tbody>${D.team.filter(m=>!m.r.includes("Manager")).map(m=>{
+    const asgns=D.tas.filter(t=>getMPR(m.e,t.id)).map(t=>t.nm.slice(0,18)).join(", ")||"—";
+    return`<tr><td><strong>${m.n.split(" ").slice(0,2).join(" ")}</strong><br><small style="color:#666">${m.r}</small></td><td style="font-family:monospace;font-size:10px">${m.e}</td><td>${m.t}</td><td>${m.s||"—"}</td><td>${asgns}</td><td style="color:#666">${m.nx||"—"}</td></tr>`;
+  }).join("")}</tbody>
+</table>
+
+<div class="footer">
+  <span>IED Operations Dashboard &nbsp;·&nbsp; Plant-Tech Arabia Co. Ltd.</span>
+  <span>PT-QSP-QC-04 Rev.02 Cl.6.10.5 &nbsp;·&nbsp; Generated: ${dt}</span>
+</div>
+
+<div class="no-print" style="margin-top:24px;text-align:center">
+  <button onclick="window.print()" style="padding:10px 28px;background:#1d4ed8;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer">🖨 Print / Save as PDF</button>
+  <p style="margin-top:8px;font-size:11px;color:#666">Use Ctrl+P → Save as PDF &nbsp;·&nbsp; Set margins to Minimum in print dialog for best results</p>
+</div>
+</body></html>`;
+
+  const w=window.open("","_blank","width=1000,height=800");
+  w.document.write(html);w.document.close();
+}
+
+
+// ════════════════════════════════════════════════════════════
+// DOC TRACKER — all functions prefixed dt_ to avoid conflicts
+// Storage: ied_master_v2 (separate key, loads existing data)
+// ════════════════════════════════════════════════════════════
+const DT_SK = 'ied_master_v2';
+const DT_PO = {Urgent:0,High:1,Medium:2,Low:3};
+const DT_SO = {Pending:0,Blocked:1,Submitted:2,'In Progress':3,Approved:4,Done:4,Cancelled:5};
+const DT_PROJ_CLASS = {'IBN ZAHR':'proj-ibz','AR-RAZI P-III':'proj-ar3','AR-RAZI P-V':'proj-ar5','UNITED LAO':'proj-lao','MAADEN PAU':'proj-maaden','ETH UNITED':'proj-eth','QMS':'proj-qms','ADMIN':'proj-admin'};
+const DT_TABS = ['IBN ZAHR','AR-RAZI P-III','AR-RAZI P-V','UNITED LAO','MAADEN PAU','ETH UNITED','QMS','ADMIN'];
+
+let dtDocs = [], dtNid = 400, dtCurTab = 'all', dtSortCol = 'pri', dtSortDir = 1;
+
+const DT_SEED = [
+{id:1,project:'IBN ZAHR',docName:'ITP — HX & Fin Fan (24)',docType:'ITP',status:'Approved',pri:'Low',owner:'Thowheed',dueDate:'',notes:'Approved 25-Feb-2026',updated:'2026-03-15',cat:'TA'},
+{id:2,project:'IBN ZAHR',docName:'ITP — Vessel & Tank (7)',docType:'ITP',status:'Approved',pri:'Low',owner:'Thowheed',dueDate:'',notes:'Approved 25-Feb-2026',updated:'2026-03-15',cat:'TA'},
+{id:3,project:'IBN ZAHR',docName:'ITP — Reactor (3)',docType:'ITP',status:'Approved',pri:'Low',owner:'Thowheed',dueDate:'',notes:'Approved 11-Mar-2026',updated:'2026-03-15',cat:'TA'},
+{id:4,project:'IBN ZAHR',docName:'ITP — Column, Heater, Hot Work, Monel (6)',docType:'ITP',status:'Approved',pri:'Low',owner:'Thowheed',dueDate:'',notes:'All approved 25-Feb-2026',updated:'2026-03-15',cat:'TA'},
+{id:5,project:'IBN ZAHR',docName:'Vendor ITP — RBH Refractory',docType:'Vendor ITP',status:'Approved',pri:'Low',owner:'Thowheed',dueDate:'',notes:'Approved 23-Feb-2026',updated:'2026-03-15',cat:'TA'},
+{id:6,project:'IBN ZAHR',docName:'Vendor ITP — Painting Common (INCO)',docType:'Vendor ITP',status:'Submitted',pri:'Urgent',owner:'Thowheed / INCO',dueDate:'2026-03-21',notes:'Comments issued to INCO 08-Mar. NOT rectified. Chase INCO immediately.',updated:'2026-03-15',cat:'TA'},
+{id:7,project:'IBN ZAHR',docName:'Quality Plan + Torquing + Pressure Test Procedures',docType:'Procedure',status:'Approved',pri:'Low',owner:'Thowheed',dueDate:'',notes:'All 3 procedures approved. Quality Plan: 05-Mar-2026.',updated:'2026-03-15',cat:'TA'},
+{id:8,project:'IBN ZAHR',docName:'NDT Procedures (6 nos.)',docType:'NDT',status:'Submitted',pri:'Urgent',owner:'Thowheed / IZ Mirza Rizwan',dueDate:'2026-03-21',notes:'Submitted 04-Mar. Escalate to Abdul Shukoor if no response.',updated:'2026-03-15',cat:'TA'},
+{id:9,project:'IBN ZAHR',docName:'ANDT Procedures (2 nos.)',docType:'ANDT',status:'Submitted',pri:'Urgent',owner:'Thowheed / IZ Mirza Rizwan',dueDate:'2026-03-21',notes:'Submitted 04-Mar. Linked to SABIC internal approval Abdul Shukoor to Mirza Rizwan Baig.',updated:'2026-03-15',cat:'TA'},
+{id:10,project:'IBN ZAHR',docName:'WPS (5 nos.)',docType:'WPS',status:'Approved',pri:'Low',owner:'Thowheed',dueDate:'',notes:'Approved 05-Mar-2026',updated:'2026-03-15',cat:'TA'},
+{id:11,project:'IBN ZAHR',docName:'Weld Map Rev-0',docType:'Weld Map',status:'Submitted',pri:'Urgent',owner:'Thowheed / IZ',dueDate:'2026-03-21',notes:'Under review with IZ — no approval. Cannot start weld work without this.',updated:'2026-03-15',cat:'TA'},
+{id:12,project:'IBN ZAHR',docName:'ANDT Vendor — Delta + TCR Arabia (dual track)',docType:'ANDT',status:'In Progress',pri:'Urgent',owner:'Thowheed / MANOBALA',dueDate:'2026-03-21',notes:'DUAL TRACK: Delta for ANDT execution. TCR Arabia — 8 exchangers RFT/MFL + 1 tank MFL. Awaiting responses.',updated:'2026-03-15',cat:'TA'},
+{id:13,project:'IBN ZAHR',docName:'Refractory QC CVs — Cape (RBH REF 17226)',docType:'Other',status:'In Progress',pri:'High',owner:'Micheal / Thowheed',dueDate:'2026-03-21',notes:'Cape CVs (Nabil Balbale / Ishaq Ahmed) required for day+night shift.',updated:'2026-03-15',cat:'TA'},
+{id:14,project:'IBN ZAHR',docName:'Replica Tech SABIC Approvals (Bhavin Soni + Mimanshu Patel)',docType:'Other',status:'In Progress',pri:'High',owner:'Thowheed',dueDate:'2026-03-21',notes:'SABIC approval received from TCR Arabia. File + submit to IBN ZAHR client immediately.',updated:'2026-03-15',cat:'TA'},
+{id:15,project:'IBN ZAHR',docName:'7 Equipment De-scoped — MTBE PO# 4802436933',docType:'Other',status:'In Progress',pri:'High',owner:'Udaya / Nihal',dueDate:'2026-03-20',notes:'7 items de-scoped by SABIC 14-Mar. Review freed QC headcount.',updated:'2026-03-16',cat:'TA'},
+{id:16,project:'IBN ZAHR',docName:'QC Engineers Shortage — IBN ZAHR',docType:'Other',status:'Done',pri:'Urgent',owner:'Ali Bin / ESD',dueDate:'2026-03-17',notes:'RESOLVED 16-Mar. Interviews completed. Namelist shared with ESD for ID preparation.',updated:'2026-03-16',cat:'TA'},
+{id:17,project:'AR-RAZI P-III',docName:'ITP — Tower, HX, AFC, Sample Cooler, Vessel, HW, HDS Reactor (72/75)',docType:'ITP',status:'Approved',pri:'Low',owner:'Ali Bin',dueDate:'',notes:'72 of 75 ITPs approved.',updated:'2026-03-15',cat:'TA'},
+{id:18,project:'AR-RAZI P-III',docName:'ITP — SPC Reactor (2) — process approval pending',docType:'ITP',status:'Submitted',pri:'High',owner:'Ali Bin',dueDate:'2026-04-26',notes:'Inspection approved. Process approval pending.',updated:'2026-03-15',cat:'TA'},
+{id:19,project:'AR-RAZI P-III',docName:'ITP — Tank (4) — 1 process approval pending',docType:'ITP',status:'Submitted',pri:'Medium',owner:'Ali Bin',dueDate:'2026-04-26',notes:'3 ITPs fully approved. 1 under process approval.',updated:'2026-03-15',cat:'TA'},
+{id:20,project:'AR-RAZI P-III',docName:'Quality Plan',docType:'Procedure',status:'Submitted',pri:'High',owner:'Ali Bin',dueDate:'2026-04-26',notes:'Submitted for inspection approval. Chase AR-RAZI client.',updated:'2026-03-15',cat:'TA'},
+{id:21,project:'AR-RAZI P-III',docName:'ANDT Procedure',docType:'ANDT',status:'Submitted',pri:'High',owner:'Ali Bin',dueDate:'2026-04-26',notes:'Submitted for inspection approval. Chase client.',updated:'2026-03-15',cat:'TA'},
+{id:22,project:'AR-RAZI P-III',docName:'Weld Map — Static Equipment',docType:'Weld Map',status:'Submitted',pri:'High',owner:'Ali Bin',dueDate:'2026-04-26',notes:'Resubmitted for inspection approval. Still pending.',updated:'2026-03-15',cat:'TA'},
+{id:23,project:'AR-RAZI P-III',docName:'Weld Map — H-91',docType:'Weld Map',status:'Submitted',pri:'High',owner:'Ali Bin',dueDate:'2026-04-26',notes:'Resubmitted for inspection approval. Still pending.',updated:'2026-03-15',cat:'TA'},
+{id:24,project:'AR-RAZI P-III',docName:'WPS-PQR (9 sets)',docType:'WPS',status:'Approved',pri:'Urgent',owner:'Ali Bin',dueDate:'2026-04-26',notes:'ALL 9 SETS APPROVED. Updated 16-Mar-2026.',updated:'2026-03-16',cat:'TA'},
+{id:25,project:'AR-RAZI P-III',docName:'TML Drawings — 2 missing',docType:'Other',status:'Pending',pri:'High',owner:'Ali Bin / Mansoor',dueDate:'2026-04-26',notes:'64 required, 62 received. 2 still pending from client.',updated:'2026-03-15',cat:'TA'},
+{id:26,project:'AR-RAZI P-V',docName:'ITP — All Equipment',docType:'ITP',status:'Pending',pri:'Urgent',owner:'Ali Bin',dueDate:'2026-03-17',notes:'Kickoff 15-Mar. Revised ITP shared for approval. TA starts 22-Mar.',updated:'2026-03-16',cat:'TA'},
+{id:27,project:'AR-RAZI P-V',docName:'WPS-PQR Package',docType:'WPS',status:'Pending',pri:'Urgent',owner:'Ali Bin',dueDate:'2026-03-17',notes:'WPS/PQR sets per P-V scope. Submit to client immediately.',updated:'2026-03-15',cat:'TA'},
+{id:28,project:'AR-RAZI P-V',docName:'Weld Maps — All Scopes',docType:'Weld Map',status:'Pending',pri:'Urgent',owner:'Ali Bin',dueDate:'2026-03-17',notes:'Target 17-Mar. Submit to client for approval.',updated:'2026-03-15',cat:'TA'},
+{id:29,project:'AR-RAZI P-V',docName:'Quality Plan',docType:'Procedure',status:'Pending',pri:'Urgent',owner:'Ali Bin',dueDate:'2026-03-17',notes:'Prepare and submit to client. Target: 17-Mar-2026.',updated:'2026-03-15',cat:'TA'},
+{id:30,project:'AR-RAZI P-V',docName:'GOX Monel Line — ITP',docType:'ITP',status:'Pending',pri:'Urgent',owner:'Ali Bin',dueDate:'2026-03-17',notes:'GOX Monel part of AR-RAZI P-V scope. Dedicated ITP required.',updated:'2026-03-15',cat:'TA'},
+{id:31,project:'AR-RAZI P-V',docName:'GOX Monel Line — WPS',docType:'WPS',status:'Pending',pri:'Urgent',owner:'Ali Bin / MANOBALA',dueDate:'2026-03-17',notes:'Check if existing WPS covers Monel. If not — new PQR + WPS urgently.',updated:'2026-03-15',cat:'TA'},
+{id:32,project:'AR-RAZI P-V',docName:'GOX Monel Line — WQT',docType:'WQT',status:'Pending',pri:'Urgent',owner:'Ali Bin',dueDate:'2026-03-17',notes:'WQT shared for client approval. Updated 16-Mar.',updated:'2026-03-16',cat:'TA'},
+{id:33,project:'UNITED LAO',docName:'ITP — Tower, HX, AFC, Vessel, Tank, Mixer, Ejector (68 approved)',docType:'ITP',status:'Approved',pri:'Low',owner:'Safiullah',dueDate:'',notes:'68 of 69 inspection ITPs approved.',updated:'2026-03-15',cat:'TA'},
+{id:34,project:'UNITED LAO',docName:'ITP — Sump (1) — inspection pending',docType:'ITP',status:'Submitted',pri:'High',owner:'Safiullah',dueDate:'2026-04-16',notes:'Inspection approval still pending. Chase client.',updated:'2026-03-15',cat:'TA'},
+{id:35,project:'UNITED LAO',docName:'ITP — Hot Work, R-Stamp, HX Additional — process approvals (6)',docType:'ITP',status:'Submitted',pri:'High',owner:'Safiullah',dueDate:'2026-04-16',notes:'Process approvals pending. Chase client.',updated:'2026-03-15',cat:'TA'},
+{id:36,project:'UNITED LAO',docName:'Procedures — Torquing, Pressure Test, QP, R-Stamp RP, R-Stamp HT',docType:'Procedure',status:'Approved',pri:'Low',owner:'Safiullah',dueDate:'',notes:'All 5 procedures approved.',updated:'2026-03-15',cat:'TA'},
+{id:37,project:'UNITED LAO',docName:'Weld Map — Hot Work Scope (12 packages)',docType:'Weld Map',status:'Blocked',pri:'Urgent',owner:'Safiullah',dueDate:'2026-04-16',notes:'11/12 complete. 1 MOC package still pending from client.',updated:'2026-03-16',cat:'TA'},
+{id:38,project:'UNITED LAO',docName:'Weld Map — Hot Work Additional (13 packages)',docType:'Weld Map',status:'Approved',pri:'High',owner:'Safiullah',dueDate:'2026-04-16',notes:'ALL 13/13 COMPLETED AND APPROVED. 16-Mar-2026.',updated:'2026-03-16',cat:'TA'},
+{id:39,project:'UNITED LAO',docName:'WPS — 9/10 approved (1 pending PQR)',docType:'WPS',status:'In Progress',pri:'High',owner:'Safiullah / TCR Jijo George',dueDate:'2026-04-16',notes:'9 of 10 WPS approved. 1 WPS waiting for PQR mechanical test. Chase Jijo George.',updated:'2026-03-15',cat:'TA'},
+{id:40,project:'UNITED LAO',docName:'PQR — LTCS (TCR Arabia)',docType:'PQR',status:'In Progress',pri:'High',owner:'Safiullah / TCR Jijo George',dueDate:'2026-04-01',notes:'Coupons done 02-Mar. Mechanical testing in progress. Chase Jijo George for ETA.',updated:'2026-03-15',cat:'TA'},
+{id:41,project:'UNITED LAO',docName:'WQT — 18/24 qualified',docType:'WQT',status:'In Progress',pri:'Urgent',owner:'Safiullah / Jithin',dueDate:'2026-04-10',notes:'18/24 qualified. 8 welder names submitted 16-Mar. WQT schedule requested. Eid = hard deadline.',updated:'2026-03-16',cat:'TA'},
+{id:42,project:'UNITED LAO',docName:'PSV & Gauge Calibration',docType:'Other',status:'In Progress',pri:'Urgent',owner:'Edward / Safiullah',dueDate:'2026-03-20',notes:'PO# 4506422821 approved. Edward actioning. Confirm certs received.',updated:'2026-03-15',cat:'TA'},
+{id:43,project:'UNITED LAO',docName:'R-Stamp Pre-Fabrication Package',docType:'Other',status:'Blocked',pri:'Urgent',owner:'Safiullah / Apave Divakar',dueDate:'2026-03-20',notes:'BLOCKED: Apave/Divakar rejected pipe material. Action plan sent to United.',updated:'2026-03-16',cat:'TA'},
+{id:44,project:'MAADEN PAU',docName:'ITP HEX-003',docType:'ITP',status:'Approved',pri:'Low',owner:'Abbas Haider',dueDate:'',notes:'Completed + submitted to client 12-Mar. Mobilization: 8-Apr.',updated:'2026-03-15',cat:'TA'},
+{id:45,project:'MAADEN PAU',docName:'WPS/PQR Package',docType:'WPS',status:'In Progress',pri:'High',owner:'Safiullah / TCR Jijo George',dueDate:'2026-04-01',notes:'PQR coupon test DONE at TCR. Waiting final PQR then develop WPS then share with MAADEN.',updated:'2026-03-15',cat:'TA'},
+{id:46,project:'MAADEN PAU',docName:'WQT Welder Cards (7 welders, 4" XXS)',docType:'WQT',status:'In Progress',pri:'High',owner:'Safiullah / Usman Afzal',dueDate:'2026-04-08',notes:'Cards ready. Distribute with WPS/PQR once TCR shares. Submit to MAADEN.',updated:'2026-03-15',cat:'TA'},
+{id:47,project:'ETH UNITED',docName:'ITP — Convection Tube Replacement',docType:'ITP',status:'Pending',pri:'Urgent',owner:'Riyas / Dinesh',dueDate:'2026-03-17',notes:'Emergency. 12-15 days. Riyas (day) + Dinesh (night). Confirm competency for dissimilar weld/PWHT.',updated:'2026-03-15',cat:'TA'},
+{id:48,project:'ETH UNITED',docName:'WPS — Dissimilar Weld SS304H/SS310/P11',docType:'WPS',status:'Pending',pri:'Urgent',owner:'Ali Bin / Safiullah',dueDate:'2026-03-17',notes:'Check existing WPS coverage. If not — new WPS/PQR urgently.',updated:'2026-03-15',cat:'TA'},
+{id:49,project:'ETH UNITED',docName:'PWHT Procedure',docType:'Procedure',status:'Pending',pri:'Urgent',owner:'Ali Bin',dueDate:'2026-03-17',notes:'Required for SS310 to P11 joints. Submit to SABIC UNITED before site work.',updated:'2026-03-15',cat:'TA'},
+{id:50,project:'ETH UNITED',docName:'NDT Procedure — RT + DPT + Hardness',docType:'NDT',status:'Pending',pri:'Urgent',owner:'Thowheed',dueDate:'2026-03-17',notes:'RT before+after PWHT. DPT on bevel+final. Hardness post-PWHT.',updated:'2026-03-15',cat:'TA'},
+{id:51,project:'QMS',docName:'Quality Manual — Replace IMSP-TR-14 with HR Training Procedure',docType:'QMS Doc',status:'In Progress',pri:'High',owner:'MANOBALA',dueDate:'2026-03-20',notes:'Revision done. Replace then email GM.',updated:'2026-03-15',cat:'QMS'},
+{id:52,project:'QMS',docName:'ORG Chart — Review + Update (per GM instruction)',docType:'QMS Doc',status:'Pending',pri:'High',owner:'MANOBALA',dueDate:'2026-04-01',notes:'GM instructed review + update before TUV External Audit.',updated:'2026-03-15',cat:'QMS'},
+{id:53,project:'QMS',docName:'IT Objectives R-04 — Issue Log (Irshad)',docType:'QMS Doc',status:'In Progress',pri:'High',owner:'Irshad / MANOBALA',dueDate:'2026-03-20',notes:'R-04 content OK. Issue Log NOT shared by Irshad. Chase.',updated:'2026-03-15',cat:'QMS'},
+{id:54,project:'QMS',docName:'P&E Quality Objective (Shravan)',docType:'QMS Doc',status:'Submitted',pri:'High',owner:'MANOBALA',dueDate:'2026-03-20',notes:'Revised version resubmitted 14-Mar. MANOBALA to review and approve.',updated:'2026-03-15',cat:'QMS'},
+{id:55,project:'QMS',docName:'Vipin Skill Matrix (ISO 9001 Clause 7.1.3)',docType:'QMS Doc',status:'In Progress',pri:'High',owner:'Vipin / Mubashir',dueDate:'2026-03-25',notes:'Mubashir agreed to provide. ERP/spare parts link still in progress.',updated:'2026-03-15',cat:'QMS'},
+{id:56,project:'QMS',docName:'KPI Dashboard',docType:'QMS Doc',status:'In Progress',pri:'Medium',owner:'MANOBALA',dueDate:'2026-04-01',notes:'8 sheets in progress. Share with QC Leads for review.',updated:'2026-03-15',cat:'QMS'},
+{id:57,project:'QMS',docName:'RT Films Quantity Record — Send to GM',docType:'QMS Doc',status:'Pending',pri:'Medium',owner:'Thowheed / MANOBALA',dueDate:'2026-03-22',notes:'RT films quantity record to be compiled by Thowheed and sent to GM.',updated:'2026-03-15',cat:'QMS'},
+{id:58,project:'QMS',docName:'QCR-47 — All QC teams',docType:'QMS Doc',status:'Pending',pri:'Medium',owner:'Thowheed (lead)',dueDate:'2026-03-22',notes:'Thowheed to direct ALL QC teams to complete QCR-47 for all active + upcoming TAs.',updated:'2026-03-15',cat:'QMS'},
+{id:59,project:'QMS',docName:'Pre-Dossier — Thowheed (IBZ) + Ali Bin (AR-RAZI P-III)',docType:'QMS Doc',status:'Pending',pri:'High',owner:'Thowheed / Ali Bin',dueDate:'2026-03-20',notes:'United LAO Pre-Dossier reviewed SATISFACTORY. Both leads to prepare same format.',updated:'2026-03-15',cat:'QMS'},
+{id:60,project:'QMS',docName:'Dept Quality Objectives 2026 — Outstanding Departments',docType:'QMS Doc',status:'In Progress',pri:'Medium',owner:'MANOBALA',dueDate:'2026-04-01',notes:'P&E resubmitted 14-Mar. Projects, OSD, Facility, PRC, HRD pending.',updated:'2026-03-15',cat:'QMS'},
+{id:61,project:'QMS',docName:'ISO Audit Report Formats — PT-PRJ-06/07/08 (Mani)',docType:'QMS Doc',status:'Pending',pri:'Medium',owner:'Mani Arunachalam',dueDate:'2026-04-01',notes:'Formats sent to Mani. Follow up.',updated:'2026-03-15',cat:'QMS'},
+{id:62,project:'QMS',docName:'TUV External Surveillance Audit Readiness',docType:'QMS Doc',status:'In Progress',pri:'High',owner:'MANOBALA',dueDate:'2026-07-01',notes:'Audit Jul-Aug 2026. Readiness roadmap March-July in progress.',updated:'2026-03-15',cat:'QMS'},
+{id:63,project:'ADMIN',docName:'Cooperheat Invoice Dec-25 — Corrected resubmission',docType:'Invoice',status:'In Progress',pri:'Medium',owner:'Ali Bin / Cooperheat',dueDate:'2026-03-22',notes:'Cooperheat to resubmit corrected date-wise invoice per POA-26-000016.',updated:'2026-03-15',cat:'ADMIN'},
+{id:64,project:'ADMIN',docName:'New WPS/PQR — P15E + Aluminium + 200mm CS',docType:'Procurement',status:'In Progress',pri:'High',owner:'Thowheed / Procurement / TCR Arabia',dueDate:'2026-04-01',notes:'Thowheed to share material specs. Procurement obtains material. TCR develops PQR/WPS.',updated:'2026-03-15',cat:'ADMIN'},
+{id:65,project:'ADMIN',docName:'TCR Arabia — Welder ID Correction (PR/1148/25/WQT)',docType:'Other',status:'In Progress',pri:'Medium',owner:'Ali Bin / TCR Ahmed Al-Mubereek',dueDate:'2026-03-22',notes:'Ali Bin sent correction 12-Mar. Awaiting TCR response.',updated:'2026-03-15',cat:'ADMIN'},
+{id:66,project:'ADMIN',docName:'TCR Arabia — PQR PTA-PQR-P1-P1 LTCS-73 Status',docType:'PQR',status:'In Progress',pri:'High',owner:'Safiullah / TCR Jijo George',dueDate:'2026-04-01',notes:'Coupons under machining as of 05-Mar. Chase Jijo George for ETA.',updated:'2026-03-15',cat:'ADMIN'},
+{id:67,project:'ADMIN',docName:'Boroscope T-200 — Procurement',docType:'Procurement',status:'In Progress',pri:'Medium',owner:'Safiullah / Raja Naveed',dueDate:'2026-03-25',notes:'T-200 confirmed. 10-day delivery after payment. Safiullah to email Raja Naveed.',updated:'2026-03-15',cat:'ADMIN'},
+{id:68,project:'ADMIN',docName:'New Color Printer MR26-002217',docType:'Procurement',status:'In Progress',pri:'Low',owner:'MANOBALA / Procurement',dueDate:'2026-03-20',notes:'GM approved payment 16-Mar. Follow up with Procurement.',updated:'2026-03-16',cat:'ADMIN'},
+{id:69,project:'ADMIN',docName:'Accommodation Change — 7 QC Inspectors',docType:'Other',status:'Blocked',pri:'Low',owner:'MANOBALA / Mubashir',dueDate:'2026-03-20',notes:'Emp# 202063,202064,202308,202311,202312,202341,202342. Follow up ONLY after 20-Mar-2026.',updated:'2026-03-15',cat:'ADMIN'},
+{id:70,project:'ADMIN',docName:'MAADEN RFQ 25-RFQ-29242-2 — Dump Paper Witness Point',docType:'Other',status:'In Progress',pri:'High',owner:'Abbas Haider / Maaden',dueDate:'2026-03-20',notes:'WQT details submitted. ONE remaining: dump paper witness point before fit-up. Confirm with Abbas.',updated:'2026-03-15',cat:'ADMIN'},
+{id:71,project:'ADMIN',docName:'Apave (Divakar Panigrahi) — PO Issue + R-Stamp Meeting',docType:'Other',status:'In Progress',pri:'Urgent',owner:'MANOBALA / Procurement',dueDate:'2026-03-17',notes:'Push Procurement to issue Apave PO. Divakar rejected pipe material 16-Mar. Action plan sent.',updated:'2026-03-16',cat:'ADMIN'},
+{id:72,project:'ADMIN',docName:'Chemanol Emergency TA (PR# 1200008385/86)',docType:'Other',status:'Cancelled',pri:'Urgent',owner:'MANOBALA / Nihal',dueDate:'2026-03-20',notes:'CANCELLED 16-Mar-2026.',updated:'2026-03-16',cat:'ADMIN'},
+{id:73,project:'ADMIN',docName:'Air Receiver Tanks — Inhouse Fabrication NDT',docType:'NDT',status:'Pending',pri:'Urgent',owner:'MANOBALA / Alex',dueDate:'2026-04-16',notes:'Jithin requested NDT crew. MANOBALA informed Alex to arrange.',updated:'2026-03-16',cat:'ADMIN'},
+];
+
+function dtLoad(){
+  try{
+    const s=localStorage.getItem(DT_SK);
+    if(s){const d=JSON.parse(s);dtDocs=d.docs||JSON.parse(JSON.stringify(DT_SEED));dtNid=d.nid||400;}
+    else{dtDocs=JSON.parse(JSON.stringify(DT_SEED));}
+  }catch(e){dtDocs=JSON.parse(JSON.stringify(DT_SEED));}
+}
+function dtSave(){
+  try{localStorage.setItem(DT_SK,JSON.stringify({docs:dtDocs,nid:dtNid}));}catch(e){}
+}
+function dtToday(){return new Date().toISOString().split('T')[0];}
+function dtDaysLeft(d){if(!d)return null;return Math.ceil((new Date(d)-new Date(dtToday()))/(864e5));}
+function dtFmtDate(d){
+  if(!d)return'<span style="color:var(--tx3)">—</span>';
+  const dl=dtDaysLeft(d),p=d.split('-'),mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const lbl=p[2]+'-'+mo[parseInt(p[1])-1];
+  if(dl<0)return`<span class="dt-overdue">${lbl} (${Math.abs(dl)}d late)</span>`;
+  if(dl<=4)return`<span class="dt-duesoon">${lbl} (${dl}d)</span>`;
+  return`<span style="color:var(--tx2)">${lbl}</span>`;
+}
+function dtIsDone(s){return s==='Approved'||s==='Done'||s==='Cancelled';}
+
+function dtGetFiltered(){
+  const q=(document.getElementById('dt-srch')||{}).value?.toLowerCase()||'';
+  const ft=(document.getElementById('dt-f-type')||{}).value||'';
+  const fs=(document.getElementById('dt-f-status')||{}).value||'';
+  const fp=(document.getElementById('dt-f-pri')||{}).value||'';
+  return dtDocs.filter(d=>{
+    if(dtCurTab==='all'){if(dtIsDone(d.status))return false;}
+    else if(d.project!==dtCurTab)return false;
+    if(ft&&d.docType!==ft)return false;
+    if(fs&&d.status!==fs)return false;
+    if(fp&&d.pri!==fp)return false;
+    if(q){const h=[d.docName,d.project,d.docType,d.owner,d.notes,d.status].join(' ').toLowerCase();if(!h.includes(q))return false;}
+    return true;
+  });
+}
+
+function dtRender(){
+  let rows=dtGetFiltered();
+  rows.sort((a,b)=>{
+    let av,bv;
+    if(dtSortCol==='pri'){av=DT_PO[a.pri]??9;bv=DT_PO[b.pri]??9;}
+    else if(dtSortCol==='status'){av=DT_SO[a.status]??9;bv=DT_SO[b.status]??9;}
+    else if(dtSortCol==='dueDate'){av=a.dueDate||'9999';bv=b.dueDate||'9999';}
+    else{av=(a[dtSortCol]||'').toLowerCase();bv=(b[dtSortCol]||'').toLowerCase();}
+    if(av<bv)return-1*dtSortDir;if(av>bv)return dtSortDir;return 0;
+  });
+  const tb=document.getElementById('dt-tbody');
+  const em=document.getElementById('dt-empty');
+  const fc=document.getElementById('dt-fcount');
+  if(em)em.style.display=rows.length?'none':'block';
+  if(fc)fc.textContent=rows.length<dtDocs.filter(d=>dtCurTab==='all'?!dtIsDone(d.status):d.project===dtCurTab).length?rows.length+' shown':'';
+  if(!rows.length){if(tb)tb.innerHTML='';dtUpdStats();dtUpdTabs();return;}
+  if(tb)tb.innerHTML=rows.map((d,i)=>{
+    const rc=dtIsDone(d.status)?'is-done':'';
+    const pdot=`<span class="dt-pdot dp-${d.pri.toLowerCase()}"></span>`;
+    return`<tr class="${rc}" id="dtr${d.id}">
+      <td style="color:var(--tx3);font-family:var(--mono);font-size:10px">${pdot}${i+1}</td>
+      <td><span class="dt-proj ${DT_PROJ_CLASS[d.project]||''}">${d.project}</span></td>
+      <td><span class="dt-editable" contenteditable="true" onblur="dtIEdit(${d.id},'docName',this.textContent)">${d.docName}</span></td>
+      <td style="font-family:var(--mono);font-size:9px;color:var(--tx2)">${d.docType}</td>
+      <td><select class="dt-stsel" onchange="dtQStatus(${d.id},this.value)">${['Pending','Submitted','In Progress','Approved','Done','Blocked','Cancelled'].map(s=>`<option${d.status===s?' selected':''}>${s}</option>`).join('')}</select></td>
+      <td style="font-size:11px;color:var(--tx2)">${d.owner}</td>
+      <td>${dtFmtDate(d.dueDate)}</td>
+      <td><span class="dt-editable" contenteditable="true" style="font-size:11px;color:var(--tx2);line-height:1.45;display:block;max-width:280px" onblur="dtIEdit(${d.id},'notes',this.textContent)">${d.notes}</span></td>
+      <td style="font-family:var(--mono);font-size:9px;color:var(--tx3);white-space:nowrap">${d.updated}</td>
+      <td><button class="btn bg bxs" onclick="dtOpenEdit(${d.id})">Edit</button></td>
+    </tr>`;
+  }).join('');
+  dtUpdStats();dtUpdTabs();
+}
+
+function dtUpdStats(){
+  const c={Pending:0,Submitted:0,'In Progress':0,Approved:0,Done:0,Blocked:0,Cancelled:0,ov:0};
+  dtDocs.forEach(d=>{if(c[d.status]!==undefined)c[d.status]++;if(d.dueDate&&dtDaysLeft(d.dueDate)<0&&!dtIsDone(d.status))c.ov++;});
+  const s=id=>document.getElementById(id);
+  if(s('dt-s-pending'))s('dt-s-pending').textContent=c.Pending;
+  if(s('dt-s-submitted'))s('dt-s-submitted').textContent=c.Submitted;
+  if(s('dt-s-inprogress'))s('dt-s-inprogress').textContent=c['In Progress'];
+  if(s('dt-s-blocked'))s('dt-s-blocked').textContent=c.Blocked;
+  if(s('dt-s-approved'))s('dt-s-approved').textContent=c.Approved+c.Done;
+  if(s('dt-s-overdue'))s('dt-s-overdue').textContent=c.ov;
+  if(s('dt-s-total'))s('dt-s-total').textContent=dtDocs.length;
+}
+function dtUpdTabs(){
+  const el=id=>document.getElementById(id);
+  if(el('dtc-all'))el('dtc-all').textContent=dtDocs.filter(d=>!dtIsDone(d.status)).length;
+  DT_TABS.forEach(p=>{const e=el('dtc-'+p);if(e)e.textContent=dtDocs.filter(d=>d.project===p&&!dtIsDone(d.status)).length;});
+}
+function dtSwTab(t){
+  dtCurTab=t;
+  document.querySelectorAll('.dt-tab').forEach(el=>el.classList.toggle('on',el.dataset.dtab===t));
+  dtRender();
+}
+function dtSortBy(col){if(dtSortCol===col)dtSortDir*=-1;else{dtSortCol=col;dtSortDir=1;}dtRender();}
+function dtClearFilters(){
+  ['dt-srch','dt-f-type','dt-f-status','dt-f-pri'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  dtRender();
+}
+function dtQStatus(id,val){const d=dtDocs.find(x=>x.id===id);if(d){d.status=val;d.updated=dtToday();dtSave();dtUpdStats();dtUpdTabs();}}
+function dtIEdit(id,f,val){const d=dtDocs.find(x=>x.id===id);if(d&&d[f]!==val.trim()){d[f]=val.trim();d.updated=dtToday();dtSave();}}
+
+function dtAddDoc(){
+  const name=(document.getElementById('dt-new-name')||{}).value?.trim();if(!name)return;
+  const proj=(document.getElementById('dt-new-proj')||{}).value||'ADMIN';
+  dtDocs.push({id:dtNid++,project:proj,docName:name,
+    docType:(document.getElementById('dt-new-type')||{}).value||'Other',
+    status:'Pending',pri:(document.getElementById('dt-new-pri')||{}).value||'Medium',
+    owner:(document.getElementById('dt-new-owner')||{}).value?.trim()||'—',
+    dueDate:(document.getElementById('dt-new-due')||{}).value||'',
+    notes:'',updated:dtToday(),cat:proj==='QMS'?'QMS':proj==='ADMIN'?'ADMIN':'TA'});
+  ['dt-new-name','dt-new-owner','dt-new-due'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  dtSave();dtRender();
+}
+function dtOpenEdit(id){
+  const d=dtDocs.find(x=>x.id===id);if(!d)return;
+  const g=eid=>document.getElementById(eid);
+  g('dt-edit-id').value=id;g('dt-edit-proj').value=d.project;g('dt-edit-name').value=d.docName;
+  g('dt-edit-type').value=d.docType;g('dt-edit-status').value=d.status;g('dt-edit-pri').value=d.pri;
+  g('dt-edit-owner').value=d.owner;g('dt-edit-due').value=d.dueDate;g('dt-edit-notes').value=d.notes;
+  document.getElementById('dt-modal').classList.add('open');
+}
+function dtSaveEdit(){
+  const id=parseInt(document.getElementById('dt-edit-id').value);
+  const d=dtDocs.find(x=>x.id===id);if(!d)return;
+  const g=eid=>document.getElementById(eid).value;
+  d.project=g('dt-edit-proj');d.docName=g('dt-edit-name').trim();d.docType=g('dt-edit-type');
+  d.status=g('dt-edit-status');d.pri=g('dt-edit-pri');d.owner=g('dt-edit-owner').trim();
+  d.dueDate=g('dt-edit-due');d.notes=g('dt-edit-notes').trim();
+  d.cat=d.project==='QMS'?'QMS':d.project==='ADMIN'?'ADMIN':'TA';
+  d.updated=dtToday();dtCloseModal();dtSave();dtRender();
+}
+function dtDeleteDoc(){const id=parseInt(document.getElementById('dt-edit-id').value);if(confirm('Delete this entry?')){dtDocs=dtDocs.filter(x=>x.id!==id);dtCloseModal();dtSave();dtRender();}}
+function dtCloseModal(){document.getElementById('dt-modal').classList.remove('open');}
+
+function dtExportCSV(){
+  const h=['Project','Category','Document','Type','Status','Priority','Owner','Due Date','Notes','Last Updated'];
+  const rows=dtDocs.map(d=>[d.project,d.cat,d.docName,d.docType,d.status,d.pri,d.owner,d.dueDate,'"'+d.notes.replace(/"/g,"'")+'"',d.updated].join(','));
+  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent([h.join(','),...rows].join('\n'));
+  a.download='IED_DocTracker_'+dtToday()+'.csv';a.click();
+}
+
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){dtCloseModal();closeAll();}});
+document.getElementById('dt-modal').addEventListener('click',function(e){if(e.target===this)dtCloseModal();});
+
+function dtInit(){dtLoad();dtRender();}
+
+const REN={ov:renOV,sc:renSC,mp:renMP,gt:renGT,tm:renTM,ql:renQL,id:renID,dt:dtInit};
+function swTab(el){
+  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+  document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
+  el.classList.add("active");
+  const n=el.getAttribute("data-tab");
+  document.getElementById("p-"+n).classList.add("active");
+  REN[n]&&REN[n]();
+}
+function renAct(){const at=document.querySelector(".tab.active");if(at){const n=at.getAttribute("data-tab");REN[n]&&REN[n]();}}
+
+// ═══════════════════════════════════════════════════════════
+// CLOCK + INIT
+// ═══════════════════════════════════════════════════════════
+function tick(){const n=new Date();document.getElementById("clk").textContent=n.toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"})+" · "+n.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"})+" AST";}
+tick();setInterval(tick,30000);
+loadLocal();dtLoad();updSv();renOV();
+
+// ============================================================
+// CLOUD LAYER — Supabase realtime sync
+// ============================================================
+var SB_URL = "https://kvwpgyswjzaojvmzorxr.supabase.co";
+var SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt2d3BneXN3anphb2p2bXpvcnhyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyMTY3MjgsImV4cCI6MjA4OTc5MjcyOH0.ohJsuifkyExeybnMsl0ecWIlZ9_FhyGlQgi3ai0KVSg";
+var SB_TBL = "ied_state";
+var K_DASH = "dashboard_v1";
+var K_DT   = "doctracker_v1";
+
+let _sb = null;
+let _online = false;
+let _syncT  = null;
+
+var _me = "IED";
+
+// ── Status helpers ─────────────────────────────────────────
+function _cs(state, badge, msg) {
+  var dot = document.getElementById("cdot");
+  var bdg = document.getElementById("cbadge");
+  var sta = document.getElementById("cstatus");
+  if (!dot) return;
+  dot.className = "cdot " + state;
+  bdg.className = "cbadge " + state;
+  bdg.textContent = badge;
+  sta.textContent = msg;
+}
+
+function _cw(who, time) {
+  var el = document.getElementById("cwho");
+  if (el) el.textContent = who ? "Last: " + who + " · " + time : "";
+}
+
+// ── Upsert one key to Supabase ──────────────────────────────
+async function _push(key, value) {
+  if (!_sb || !_online) return;
+  var payload = Object.assign({}, value, {
+    _by: _me,
+    _at: new Date().toISOString()
+  });
+  var res = await _sb.from(SB_TBL).upsert(
+    {key: key, value: payload},
+    {onConflict: "key"}
+  );
+  if (res.error) {
+    console.warn("Cloud push error:", res.error);
+    _cs("err", "ERROR", "Sync failed — saved locally");
+    _online = false;
+  } else {
+    _cw(_me, new Date().toLocaleTimeString("en-GB", {hour:"2-digit", minute:"2-digit"}));
+  }
+}
+
+// ── Debounce writes — 2 second delay ───────────────────────
+function _schedule(key, value) {
+  if (_syncT) clearTimeout(_syncT);
+  _syncT = setTimeout(async function () {
+    _cs("sync", "SAVING", "Saving...");
+    await _push(key, value);
+    if (_online) _cs("live", "LIVE", "Cloud · " + _me);
+  }, 2000);
+}
+
+// ── Pull all keys from cloud ────────────────────────────────
+async function _pull() {
+  if (!_sb) throw new Error("no client");
+  var res = await _sb.from(SB_TBL).select("key,value,updated_at");
+  if (res.error) { console.error("Supabase SELECT error:", res.error); throw res.error; }
+  var rows = {};
+  (res.data || []).forEach(function(r) { rows[r.key] = r; });
+
+  // Dashboard — use cloud if newer
+  if (rows[K_DASH]) {
+    var local = localStorage.getItem("ied_v5");
+    var lts   = local ? (JSON.parse(local).saved || "0") : "0";
+    var cts   = rows[K_DASH].updated_at;
+    if (!local || cts > lts) {
+      D = rows[K_DASH].value;
+      D.mp = normMP(D.mp || {});
+      localStorage.setItem("ied_v5", JSON.stringify(D));
+    }
+  }
+
+  // Doc Tracker — use cloud if newer
+  if (rows[K_DT]) {
+    var localDT = localStorage.getItem("ied_master_v2");
+    var ltsDT   = localDT ? (JSON.parse(localDT)._at || "0") : "0";
+    var ctsDT   = rows[K_DT].updated_at;
+    if (!localDT || ctsDT > ltsDT) {
+      var dt = rows[K_DT].value;
+      dtDocs = dt.docs || dtDocs;
+      dtNid  = dt.nid  || dtNid;
+      localStorage.setItem("ied_master_v2", JSON.stringify({docs:dtDocs, nid:dtNid}));
+    }
+  }
+
+  renAct();
+  if (typeof dtRender === "function" &&
+      document.getElementById("p-dt") &&
+      document.getElementById("p-dt").classList.contains("active")) {
+    dtRender();
+  }
+}
+
+// ── Realtime subscription ───────────────────────────────────
+function _subscribe() {
+  if (!_sb) return;
+  _sb.channel("ied-rt")
+    .on("postgres_changes", {
+      event: "*", schema: "public", table: SB_TBL
+    }, function(payload) {
+      var row = payload.new;
+      if (!row || !row.value) return;
+      var by = row.value._by;
+      if (by === _me) return; // skip own writes
+
+      _cs("sync", "UPDATE", (by || "Team") + " updated...");
+      setTimeout(function() {
+        if (row.key === K_DASH) {
+          D = row.value;
+          D.mp = normMP(D.mp || {});
+          localStorage.setItem("ied_v5", JSON.stringify(D));
+          renAct();
+        } else if (row.key === K_DT) {
+          dtDocs = row.value.docs || dtDocs;
+          dtNid  = row.value.nid  || dtNid;
+          if (document.getElementById("p-dt").classList.contains("active")) dtRender();
+        }
+        _cs("live", "LIVE",
+          "Updated by " + (by||"team") + " · " +
+          new Date().toLocaleTimeString("en-GB", {hour:"2-digit",minute:"2-digit"})
+        );
+      }, 150);
+    })
+    .subscribe();
+}
+
+// ── Public: force sync ──────────────────────────────────────
+async function cloudSync() {
+  if (!_sb) { alert("Not connected to cloud."); return; }
+  _cs("sync", "SYNCING", "Pulling latest...");
+  try {
+    await _pull();
+    _cs("live", "LIVE", "Synced · " + _me);
+    alert("Sync complete — data is up to date.");
+  } catch(e) {
+    _cs("err", "ERROR", "Sync failed: " + e.message);
+    alert("Sync failed. Check network.");
+  }
+}
+
+// ── Init ────────────────────────────────────────────────────
+function cloudInit() {
+  try {
+    _sb = supabase.createClient(SB_URL, SB_KEY);
+    _cs("sync", "CONNECTING", "Connecting to cloud...");
+    _pull()
+      .then(function() {
+        _online = true;
+        _cs("live", "LIVE", "Cloud connected");
+        _subscribe();
+      })
+      .catch(function(err) {
+        console.error("Cloud pull error:", err);
+        _online = false;
+        var msg = "";
+        if (err && err.message) msg = err.message;
+        else if (err && err.code)  msg = "Code " + err.code + ": " + (err.details||err.hint||"");
+        else msg = JSON.stringify(err).substring(0,100);
+        _cs("err", "ERROR", msg || "Unknown error — see console");
+      });
+  } catch(e) {
+    _cs("err", "ERROR", "Init failed: " + e.message);
+  }
+}
+
+// ── Wrap save() ─────────────────────────────────────────────
+var _sSave = window.save;
+window.save = function() {
+  D.saved = new Date().toISOString();
+  try { localStorage.setItem("ied_v5", JSON.stringify(D)); } catch(e) {}
+  updSv();
+  _schedule(K_DASH, D);
+};
+
+// ── Wrap dtSave() ────────────────────────────────────────────
+var _sDtSave = window.dtSave;
+window.dtSave = function() {
+  try { localStorage.setItem("ied_master_v2", JSON.stringify({docs:dtDocs,nid:dtNid})); } catch(e) {}
+  _schedule(K_DT, {docs:dtDocs, nid:dtNid});
+};
+
+
+cloudInit();
+</script>
+</body>
+</html>
