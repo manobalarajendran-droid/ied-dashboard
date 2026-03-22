@@ -2063,7 +2063,13 @@ async function _push(key, value) {
   var ts=new Date().toISOString();
   var payload=Array.isArray(value)?value:Object.assign({},value,{_cloud_ts:ts});
   var res=await _sb.from(SB_TBL).upsert({key:key,value:payload,updated_at:ts},{onConflict:"key"});
-  if(res.error){_online=false;_cs("err","ERROR","Sync failed");}
+  if(res.error){
+    console.error("Push failed:",res.error);
+    _online=false;
+    _cs("err","ERROR","Save failed: "+res.error.message);
+  } else {
+    console.log("Pushed",key,"at",ts);
+  }
 }
 
 function _schedule(key,value){
@@ -2110,20 +2116,28 @@ function _subscribe(){
 }
 
 async function cloudSync(){
-  if(!_sb){alert("Not connected.");return;}
-  _cs("sync","SYNCING","Pulling latest...");
-  try{await _pull();_cs("live","LIVE","Synced");alert("Sync complete.");}
-  catch(e){_cs("err","ERROR","Failed: "+e.message);alert("Sync failed. Check network.");}
+  if(!_sb){alert("Not connected to cloud.");return;}
+  _cs("sync","SYNCING","Pulling from cloud...");
+  try{
+    await _pull();
+    _cs("live","LIVE","Synced — "+new Date().toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"}));
+  } catch(e){
+    console.error("Sync failed:",e);
+    _cs("err","ERROR","Sync failed: "+e.message);
+    alert("Sync failed: "+e.message);
+  }
 }
 
 window.save=function(){
   D.saved=new Date().toISOString();
   try{localStorage.setItem("ied_v5",JSON.stringify(D));}catch(e){}
-  updSv();_schedule(K_DASH,D);
+  updSv();
+  var _snap=JSON.parse(JSON.stringify(D));
+  _schedule(K_DASH,_snap);
 };
 
 window.dtSave=function(){
-  var p={docs:dtDocs,nid:dtNid};
+  var p={docs:JSON.parse(JSON.stringify(dtDocs)),nid:dtNid};
   try{localStorage.setItem("ied_master_v2",JSON.stringify(p));}catch(e){}
   _schedule(K_DT,p);
 };
