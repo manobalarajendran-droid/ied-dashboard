@@ -2081,20 +2081,16 @@ async function _pull(){
   if(res.error)throw res.error;
   var rows={};
   (res.data||[]).forEach(function(r){rows[r.key]=r.value;});
+  // Cloud is always the source of truth — no timestamp comparison
   if(rows[K_DASH]){
-    var local=localStorage.getItem("ied_v5");
-    var lts=local?(JSON.parse(local)._cloud_ts||JSON.parse(local).saved||"0"):"0";
-    var cts=rows[K_DASH]._cloud_ts||"1";
-    if(!local||cts>lts){D=rows[K_DASH];D.mp=normMP(D.mp||{});localStorage.setItem("ied_v5",JSON.stringify(D));}
+    D=rows[K_DASH];
+    D.mp=normMP(D.mp||{});
+    localStorage.setItem("ied_v5",JSON.stringify(D));
   }
   if(rows[K_DT]){
-    var localDT=localStorage.getItem("ied_master_v2");
-    var ltsDT=localDT?(JSON.parse(localDT)._cloud_ts||"0"):"0";
-    var ctsDT=rows[K_DT]._cloud_ts||"1";
-    if(!localDT||ctsDT>ltsDT){
-      dtDocs=rows[K_DT].docs||dtDocs;dtNid=rows[K_DT].nid||dtNid;
-      localStorage.setItem("ied_master_v2",JSON.stringify({docs:dtDocs,nid:dtNid,_cloud_ts:ctsDT}));
-    }
+    dtDocs=rows[K_DT].docs||dtDocs;
+    dtNid=rows[K_DT].nid||dtNid;
+    localStorage.setItem("ied_master_v2",JSON.stringify({docs:dtDocs,nid:dtNid}));
   }
   renAct();
   if(document.getElementById("p-dt")&&document.getElementById("p-dt").classList.contains("active"))dtRender();
