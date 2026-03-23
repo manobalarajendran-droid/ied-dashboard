@@ -2253,61 +2253,115 @@ function dtExportPDF() {
   }
   var docs = dtDocs.filter(function(d) { return d.project === proj; });
   if (!docs.length) { alert("No documents for " + proj); return; }
-  var today = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "2-digit" }).replace(/\//g, ".");
-  var COLS = { Approved: "#15803d", Done: "#15803d", Pending: "#b91c1c",
-               Submitted: "#1d4ed8", Blocked: "#6d28d9", "In Progress": "#c2410c" };
+
+  var today = new Date().toLocaleDateString("en-GB", {day:"2-digit",month:"2-digit",year:"2-digit"}).replace(/\//g,".");
   var open    = docs.filter(function(d) { return !dtIsDone(d.status); });
-  var stats = [
-    { l: "Pending",     n: open.filter(function(d){ return d.status==="Pending"; }).length,     bg: "#faeaea", col: "#b91c1c" },
-    { l: "Submitted",   n: open.filter(function(d){ return d.status==="Submitted"; }).length,   bg: "#eff6ff", col: "#1d4ed8" },
-    { l: "In Progress", n: open.filter(function(d){ return d.status==="In Progress"; }).length, bg: "#fff7ed", col: "#c2410c" },
-    { l: "Blocked",     n: open.filter(function(d){ return d.status==="Blocked"; }).length,     bg: "#f5f3ff", col: "#6d28d9" },
-    { l: "Done/Appr",   n: docs.filter(function(d){ return dtIsDone(d.status); }).length,       bg: "#f0fdf4", col: "#15803d" },
-    { l: "OVERDUE",     n: open.filter(function(d){ return d.dueDate && dtDaysLeft(d.dueDate) < 0; }).length, bg: "#faeaea", col: "#b91c1c", bold: true }
-  ].filter(function(s){ return s.n > 0; });
-  var statHtml = stats.map(function(s) {
-    return "<div style=\"padding:8px 14px;border-radius:4px;text-align:center;background:" + s.bg + ";color:" + s.col + (s.bold ? ";border:2px solid " + s.col : "") + "\">" +
-      "<div style=\"font-size:22px;font-weight:700;line-height:1\">" + s.n + "</div>" +
-      "<div style=\"font-size:9px;text-transform:uppercase;margin-top:2px\">" + s.l + "</div></div>";
+  var pending = open.filter(function(d) { return d.status==="Pending"; }).length;
+  var subm    = open.filter(function(d) { return d.status==="Submitted"; }).length;
+  var inprog  = open.filter(function(d) { return d.status==="In Progress"; }).length;
+  var blocked = open.filter(function(d) { return d.status==="Blocked"; }).length;
+  var done    = docs.filter(function(d) { return dtIsDone(d.status); }).length;
+  var overdue = open.filter(function(d) { return d.dueDate && dtDaysLeft(d.dueDate) < 0; }).length;
+
+  // Status colour map
+  var SC = {
+    "Approved":"#15803d","Done":"#15803d","Pending":"#b91c1c",
+    "Submitted":"#1d4ed8","Blocked":"#6d28d9","In Progress":"#c2410c","Cancelled":"#6b7280"
+  };
+
+  // Stat pills
+  var statHtml = [
+    {l:"Pending",    n:pending, bg:"#fef2f2",col:"#b91c1c"},
+    {l:"Submitted",  n:subm,    bg:"#eff6ff",col:"#1d4ed8"},
+    {l:"In Progress",n:inprog,  bg:"#fff7ed",col:"#c2410c"},
+    {l:"Blocked",    n:blocked, bg:"#f5f3ff",col:"#6d28d9"},
+    {l:"Approved",   n:done,    bg:"#f0fdf4",col:"#15803d"},
+    {l:"Overdue",    n:overdue, bg:"#fef2f2",col:"#b91c1c",bold:true}
+  ].filter(function(s){return s.n>0;}).map(function(s){
+    return '<div style="padding:6px 12px;border-radius:4px;text-align:center;background:'+s.bg+
+           ';color:'+s.col+(s.bold?';border:2px solid '+s.col:'')+'">' +
+           '<div style="font-size:20px;font-weight:700;line-height:1">'+s.n+'</div>'+
+           '<div style="font-size:9px;text-transform:uppercase;margin-top:2px">'+s.l+'</div></div>';
   }).join("");
+
+  // Table rows — exactly matching email format
+  // S.No | Document Type | Description | Total Qty | Sent for Approval | Approved Qty | Remarks
   var rows = docs.map(function(d, i) {
-    var col = COLS[d.status] || "#6b6460";
+    var col = SC[d.status] || "#6b7280";
     var dl  = d.dueDate ? dtDaysLeft(d.dueDate) : null;
-    var due = !d.dueDate ? "-" : dl < 0 ?
-      "<span style=\"color:#b91c1c;font-weight:700\">" + d.dueDate + " (" + Math.abs(dl) + "d LATE)</span>" : d.dueDate;
-    return "<tr style=\"background:" + (i % 2 === 0 ? "#f8f8f8" : "#fff") + "\">" +
-      "<td style=\"padding:5px 8px;font-size:10px;color:#9a9690\">" + (i + 1) + "</td>" +
-      "<td style=\"padding:5px 8px;font-size:11px;font-weight:500\">" + d.docName + "</td>" +
-      "<td style=\"padding:5px 8px;font-size:10px;color:#6b6460\">" + d.docType + "</td>" +
-      "<td style=\"padding:5px 8px\"><span style=\"padding:2px 7px;border-radius:3px;font-size:10px;font-weight:700;background:" + col + "20;color:" + col + ";border:1px solid " + col + "40\">" + d.status + "</span></td>" +
-      "<td style=\"padding:5px 8px;font-size:11px\">" + (d.owner || "-") + "</td>" +
-      "<td style=\"padding:5px 8px;font-size:11px\">" + due + "</td>" +
-      "<td style=\"padding:5px 8px;font-size:11px;color:#6b6460\">" + (d.notes || "-") + "</td>" +
-      "</tr>";
+    var approvedQty = (d.status==="Approved"||d.status==="Done") ? "&#10003;" : "-";
+    var sentQty     = (d.status!=="Pending") ? "&#10003;" : "-";
+    var rowBg = i % 2 === 0 ? "#f9f9f9" : "#ffffff";
+    var odStyle = dl !== null && dl < 0 ? "color:#b91c1c;font-weight:700" : "";
+    return '<tr style="background:'+rowBg+'">' +
+      '<td style="padding:5px 8px;font-size:11px;color:#9a9690;text-align:center">'+(i+1)+'</td>' +
+      '<td style="padding:5px 8px;font-size:11px">' + d.docType + '</td>' +
+      '<td style="padding:5px 8px;font-size:11px;font-weight:500">' + d.docName + '</td>' +
+      '<td style="padding:5px 8px;font-size:11px;text-align:center">-</td>' +
+      '<td style="padding:5px 8px;font-size:11px;text-align:center">' + sentQty + '</td>' +
+      '<td style="padding:5px 8px;text-align:center">' +
+        '<span style="padding:2px 8px;border-radius:3px;font-size:10px;font-weight:700;' +
+        'background:'+col+'20;color:'+col+';border:1px solid '+col+'40">'+d.status+'</span>' +
+      '</td>' +
+      '<td style="padding:5px 8px;font-size:11px;color:#6b7280;'+odStyle+'">' +
+        (d.notes||"-") + (dl!==null&&dl<0?" ("+Math.abs(dl)+"d LATE)":"") +
+      '</td>' +
+      '</tr>';
   }).join("");
-  var html = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>" + proj + " QC Report</title>" +
-    "<style>body{font-family:Arial,sans-serif;font-size:12px;margin:0;padding:20px}" +
-    "table{width:100%;border-collapse:collapse}" +
-    "th{background:#1c1917;color:#fff;padding:7px 8px;text-align:left;font-size:10px;text-transform:uppercase}" +
-    "td{border-bottom:1px solid #e8e4dc;vertical-align:top}" +
-    ".hdr{background:#1c1917;color:#fff;padding:14px 18px;margin:-20px -20px 16px;display:flex;justify-content:space-between;align-items:center}" +
-    ".hdr h1{margin:0;font-size:15px}.hdr span{font-size:10px;opacity:.7}" +
-    ".stats{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}" +
-    ".foot{margin-top:16px;padding-top:10px;border-top:1px solid #ddd;font-size:10px;color:#9a9690;display:flex;justify-content:space-between}" +
-    "@media print{body{padding:10px}.hdr{margin:-10px -10px 12px}}</style></head><body>" +
-    "<div class=\"hdr\"><h1>" + proj + " — QC Document Status Report</h1>" +
-    "<span>Plant-Tech Arabia | " + today + " | " + _WHO + "</span></div>" +
-    "<div class=\"stats\">" + statHtml + "</div>" +
-    "<table><thead><tr>" +
-    "<th style=\"width:28px\">#</th><th>Document</th><th style=\"width:80px\">Type</th>" +
-    "<th style=\"width:100px\">Status</th><th style=\"width:120px\">Owner</th>" +
-    "<th style=\"width:80px\">Due</th><th>Notes</th></tr></thead>" +
-    "<tbody>" + rows + "</tbody></table>" +
-    "<div class=\"foot\"><span>Plant-Tech Arabia Co. Ltd | IED | Al-Jubail</span><span>" + proj + " | " + today + "</span></div>" +
-    "<scr" + "ipt>window.onload=function(){window.print();}<\/scr" + "ipt></body></html>";
-  var w = window.open("", "_blank", "width=1000,height=700");
-  if (w) { w.document.write(html); w.document.close(); }
-  else { alert("Allow popups to export PDF."); }
+
+  var html =
+    '<!DOCTYPE html><html><head><meta charset="UTF-8">' +
+    '<title>'+proj+' QC Document Status</title>' +
+    '<style>' +
+    'body{font-family:Arial,sans-serif;font-size:12px;color:#1c1917;margin:0;padding:0}' +
+    '.hdr{background:#1c1917;color:#fff;padding:14px 20px;display:flex;justify-content:space-between;align-items:center}' +
+    '.hdr h1{margin:0;font-size:15px;font-weight:700}' +
+    '.hdr .sub{font-size:10px;opacity:.6;margin-top:3px}' +
+    '.body{padding:16px 20px}' +
+    '.stats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}' +
+    'table{width:100%;border-collapse:collapse;margin-bottom:16px}' +
+    'thead tr{background:#1c1917}' +
+    'th{padding:7px 8px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#fff;white-space:nowrap}' +
+    'th.ctr{text-align:center}' +
+    'td{border-bottom:1px solid #e8e4dc;vertical-align:middle}' +
+    '.foot{padding:10px 20px;border-top:1px solid #ddd;font-size:10px;color:#9a9690;display:flex;justify-content:space-between}' +
+    '@media print{@page{margin:10mm}body{font-size:11px}}' +
+    '</style></head><body>' +
+    '<div class="hdr">' +
+      '<div><h1>'+proj+' — QC Document Status Report</h1>' +
+      '<div class="sub">Plant-Tech Arabia Co. Ltd &nbsp;|&nbsp; Al-Jubail, Saudi Arabia</div></div>' +
+      '<div style="text-align:right;font-size:10px;opacity:.7">Generated: '+today+'<br>By: '+_WHO+'</div>' +
+    '</div>' +
+    '<div class="body">' +
+    '<div class="stats">'+statHtml+'</div>' +
+    '<table>' +
+    '<thead><tr>' +
+      '<th class="ctr" style="width:36px">S.No</th>' +
+      '<th style="width:100px">Document Type</th>' +
+      '<th>Description</th>' +
+      '<th class="ctr" style="width:70px">Total Qty</th>' +
+      '<th class="ctr" style="width:80px">Sent for Approval</th>' +
+      '<th class="ctr" style="width:100px">Status</th>' +
+      '<th>Remarks / Notes</th>' +
+    '</tr></thead>' +
+    '<tbody>'+rows+'</tbody>' +
+    '</table>' +
+    '</div>' +
+    '<div class="foot">' +
+      '<span>Plant-Tech Arabia Co. Ltd &nbsp;|&nbsp; IED Department &nbsp;|&nbsp; ISO 9001:2015</span>' +
+      '<span>'+proj+' &nbsp;|&nbsp; '+today+'</span>' +
+    '</div>' +
+    '</body></html>';
+
+  // Fix: write to popup then print — no onload needed
+  var w = window.open("", "_blank", "width=1050,height=750");
+  if (!w) { alert("Allow popups to export PDF."); return; }
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+  // Small delay then print — avoids the 'callback no longer runnable' error
+  setTimeout(function() { try { w.print(); } catch(e) { console.warn("Print:", e); } }, 600);
+
   actLog("PDF exported", "[" + proj + "] " + docs.length + " items");
 }
 
