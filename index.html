@@ -828,9 +828,17 @@ function impBk(e){
         if(imp.doctracker){dtDocs=imp.doctracker.docs||[];dtNid=imp.doctracker.nid||400;dtSave();}
         save();renAct();
         alert("Loaded: "+D.team.length+" members, "+D.tas.length+" TAs, "+dtDocs.length+" doc items.");
+        // Push restored data to cloud immediately
+        if(typeof _push==="function"&&_online){
+          var snapD=JSON.parse(JSON.stringify(D));
+          var snapDT={docs:JSON.parse(JSON.stringify(dtDocs)),nid:dtNid};
+          _push(K_DASH,snapD);
+          _push(K_DT,snapDT);
+        }
       } else if(imp.team&&imp.tas){
         D=imp;D.mp=normMP(D.mp||{});save();renAct();
         alert("Dashboard loaded: "+D.team.length+" members, "+D.tas.length+" TAs.");
+        if(typeof _push==="function"&&_online){_push(K_DASH,JSON.parse(JSON.stringify(D)));}
       } else if(imp.docs){
         dtDocs=imp.docs||[];dtNid=imp.nid||400;dtSave();
         if(document.getElementById("p-dt").classList.contains("active"))dtRender();
